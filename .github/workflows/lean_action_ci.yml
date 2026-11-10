@@ -22,7 +22,8 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Pinned, so that a change of the image behind `ubuntu-latest` does not change the build.
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Free disk space on the runner
@@ -125,7 +126,7 @@ jobs:
         with:
           path: site/
           name: site-with-home-page
-      - uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v5
         continue-on-error: true
         if: github.event_name == 'push'
         with:
