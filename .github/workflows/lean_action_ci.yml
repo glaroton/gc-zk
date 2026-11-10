@@ -131,6 +131,5 @@ jobs:
         if: github.event_name == 'push'
         with:
           artifact_name: site-with-home-page
-          # The site (about 64 MB, mostly the API documentation) can take more than the default
-          # 10 minutes to sync, and on timeout the deployment is cancelled.
-          timeout: 1800000
+          # The deployment is cancelled if GitHub takes more than 10 minutes (the maximum of the
+          # `timeout` input) to sync the site; this happened once (2026-11-10). Re-run the job.
