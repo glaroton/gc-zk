@@ -54,9 +54,9 @@ this is its summary, with the Lean theorems.
 | Hash commitment (random oracle) | Statistical zero knowledge, programmable oracle | `GcZk.Com.zk_rom` |
 | PVW OT, messy mode | Computational zero knowledge (DDH) | `GcZk.PVW.zk_pvw_ddh` |
 | Chou–Orlandi OT | Soundness by reduction to square Diffie–Hellman | `GcZk.CO.prob_accept_le` |
-| Adaptive corruptions | A receiver-equivocal OT with an ideal commitment suffices (Ganesh–Kondi–Patra–Sarkar) | not formalized |
+| Adaptive corruptions | A receiver-equivocal OT with an ideal commitment suffices (Ganesh–Kondi–Patra–Sarkar) | the ingredients: `GcZk.AC.pvw_dec_equivocal`, `GcZk.AC.explain_prover`, `GcZk.AC.equivocate_rom`, `GcZk.AC.prob_accept_dec_le`; adaptive security itself is not formalized |
 
-All the statements above assume *static* corruptions: the adversary chooses at the start which
+The security statements above assume *static* corruptions: the adversary chooses at the start which
 party it controls. Against *adaptive* corruptions, a simulator must also explain its transcript when
 the prover is corrupted late. For two parties this matters mainly when the proof is a component of
 a larger, composed protocol. What has to be explained depends on when the prover is corrupted
@@ -66,12 +66,13 @@ Sect. 3, who prove the case of an ideal commitment):
 | Prover corrupted | To be explained | Property used |
 |---|---|---|
 | before the oblivious transfers | nothing | none |
-| after the oblivious transfers, before the commitment | its OT messages, for the actual witness | receiver-equivocal OT (e.g. PVW in decryption mode) |
-| after the commitment, before the opening | its OT messages and its commitment | also an equivocal commitment |
-| after the label is revealed | its OT messages; the commitment is already opened | receiver-equivocal OT; the label does not depend on the witness (`GcZk.Jko.zk`) |
+| after the oblivious transfers, before the commitment | its OT messages, for the actual witness | receiver-equivocal OT (`GcZk.AC.pvw_dec_equivocal`, `GcZk.AC.explain_prover`) |
+| after the commitment, before the opening | its OT messages and its commitment | also an equivocal commitment (`GcZk.AC.equivocate_rom`) |
+| after the label is revealed | its OT messages; the commitment is already opened | receiver-equivocal OT; the label does not depend on the witness (`GcZk.Jko.zk`, `GcZk.AC.explain_prover`) |
 
-Adaptive corruptions and universal composability (UC) are discussed in the blueprint but not
-formalized here.
+Universal composability (UC) and adaptive security itself, which needs a model of execution with
+corruptions, are discussed in the blueprint but not formalized here. What is formalized are the
+protocol-specific ingredients of the table (`GcZk/Corruption.lean`, see the contents below).
 
 **No claim of originality.** No originality is claimed for any definition, statement or proof
 idea: the protocols, the security notions and the arguments come from the cited literature or are
@@ -208,6 +209,21 @@ soundness needs adaptive authenticity.
   `Adv` the sum of the advantages of `k (n₀ + n₁)(n₀ + n₁ - 1)` explicit square Diffie–Hellman
   solvers, in a group of prime order `q`.
 
+### Ingredients for adaptive corruptions
+
+* `GcZk/Corruption.lean`. `GcZk.AC.ReceiverEquivocal`: the receiver's OT message can be produced
+  without the choice bit and explained for either bit by a bijection of its randomness (Ganesh,
+  Kondi, Patra and Sarkar, PKC 2018, Definition 3.1). `GcZk.AC.pvw_dec_equivocal`: the PVW
+  receiver in decryption mode is receiver equivocal (ibid., Theorem 3.2). `GcZk.AC.co_equivocal`:
+  so is the Chou–Orlandi receiver, for a party that knows the sender's secret.
+  `GcZk.AC.explain_prover`: with a receiver-equivocal OT, the prover's OT messages and the
+  verifier's view, for any witness and the explained randomness, are the simulated ones.
+  `GcZk.AC.equivocate_rom`: a prover corrupted after committing reveals `(Z_w, r)`; a simulator
+  that committed to a uniform value and programs `G(Z_w, r)` at the corruption is off by at most
+  `(q₁ + q₂ + q₃) / |R|`. `GcZk.AC.prob_accept_dec_le`: soundness with the PVW OT in decryption
+  mode, at most the messy-mode bound plus the DDH advantage of the acceptance probability plus
+  `3 / q`.
+
 ### Cut-and-choose
 
 * `GcZk/CutAndChoose.lean`: cut-and-choose against a malicious garbler, when one good evaluated
@@ -224,8 +240,8 @@ soundness needs adaptive authenticity.
 
 The efficiency of the DDH distinguishers and of the square Diffie–Hellman solvers (Lean has no
 notion of efficient computation), the hash outside the random oracle model, the reduction of
-adversaries with fewer or differently interleaved queries to the fixed form, adaptive corruptions and
-universal composition, the consistency of the garbler's inputs across cut-and-choose copies, and
+adversaries with fewer or differently interleaved queries to the fixed form, adaptive security
+itself and universal composition (only their protocol-specific ingredients are formalized), the consistency of the garbler's inputs across cut-and-choose copies, and
 any implementation. Details are in the last chapter of the blueprint.
 
 ## Related work

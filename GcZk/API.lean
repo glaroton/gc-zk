@@ -56,6 +56,14 @@ mathematical language; its labels (`thm:zk`, `thm:co-sound`, ...) are stable as 
 * `GcZk.PVW.zk_pvw`, `GcZk.PVW.zk_pvw_modes`, `GcZk.PVW.zk_pvw_ddh`: zero knowledge with the PVW OT,
   reduced to DDH.
 
+## Ingredients for adaptive corruptions (`GcZk.AC`)
+
+* `GcZk.AC.ReceiverEquivocal`, `GcZk.AC.pvw_dec_equivocal`, `GcZk.AC.co_equivocal`:
+  receiver-equivocal OT, and its PVW (decryption mode) and Chou–Orlandi instances.
+* `GcZk.AC.explainRand`, `GcZk.AC.explain_prover`: explaining the prover's OT messages and view.
+* `GcZk.AC.simC`, `GcZk.AC.equivocate_rom`: equivocating the hash commitment.
+* `GcZk.AC.pAcc`, `GcZk.AC.prob_accept_dec_le`: soundness with the PVW OT in decryption mode.
+
 ## Cut-and-choose
 
 * `GcZk.CC.prob_cheats_fixed_le`, `GcZk.CC.prob_cheats_lindell`, `GcZk.CCG.caught_or_correct`,

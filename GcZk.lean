@@ -23,3 +23,4 @@ import GcZk.AdaptiveBound
 import GcZk.COSound
 import GcZk.COSqDH
 import GcZk.COFinal
+import GcZk.Corruption

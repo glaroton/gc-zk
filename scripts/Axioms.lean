@@ -61,3 +61,11 @@ import GcZk
 #print axioms GcZk.CO.key_ne
 #print axioms GcZk.CO.card_both_le
 #print axioms GcZk.CO.prob_accept_le
+#print axioms GcZk.AC.pvw_dec_equivocal
+#print axioms GcZk.AC.co_equivocal
+#print axioms GcZk.AC.explainRand_bijective
+#print axioms GcZk.AC.explain_prover
+#print axioms GcZk.AC.hyb_eq_simC
+#print axioms GcZk.AC.equivocate_rom
+#print axioms GcZk.AC.crsM_messy
+#print axioms GcZk.AC.prob_accept_dec_le

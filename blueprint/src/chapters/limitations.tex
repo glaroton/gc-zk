@@ -20,9 +20,12 @@ We list the gaps between the statements above and a complete security proof.
   \item \textbf{Number of queries.} The adversaries make a fixed number of queries, in a fixed
   pattern. Reducing an adversary that makes fewer queries, or interleaves them differently, to this
   form by padding with dummy queries is stated in the introduction but not formalized.
-  \item \textbf{Adaptive corruptions and composition.} All statements assume static corruptions
-  and concern a single execution. Security against adaptive corruptions and universal composition
-  are discussed in Section~\ref{sec:corruptions} but not formalized.
+  \item \textbf{Adaptive corruptions and composition.} All security statements concern a single
+  execution. Security against adaptive corruptions and universal composition are discussed in
+  Section~\ref{sec:corruptions} but not formalized; Chapter~\ref{chap:corruption} proves only the
+  protocol-specific ingredients (receiver equivocality, the explanation of the prover, the
+  equivocation of the commitment, soundness in decryption mode), not a simulation in a model of
+  execution with corruptions.
   \item \textbf{Cut-and-choose.} The consistency of the garbler's own inputs across the evaluated
   copies is not modeled.
 \end{itemize}
