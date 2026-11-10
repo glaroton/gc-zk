@@ -131,3 +131,6 @@ jobs:
         if: github.event_name == 'push'
         with:
           artifact_name: site-with-home-page
+          # The site (about 64 MB, mostly the API documentation) can take more than the default
+          # 10 minutes to sync, and on timeout the deployment is cancelled.
+          timeout: 1800000
