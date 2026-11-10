@@ -1,0 +1,124 @@
+\chapter{Privacy-free Free-XOR garbling}
+\label{chap:garbling}
+
+Labels live in a vector space $V$ over $\F$; for instance $V = \F^{128}$, that is,
+128-bit strings with XOR. A wire carries one of two labels, $L$ for the bit $0$ and $L + \Delta$
+for the bit $1$, where $\Delta \in V$ is a global offset chosen by the garbler. The evaluator
+holds one of them, the \emph{active} label; the other one is \emph{inactive}.
+
+\section{Circuits and plaintext evaluation}
+
+\begin{definition}[Circuits]
+  \label{def:circuit}
+  \lean{GcZk.Node, GcZk.Circuit}
+  \leanok
+  A node is one of $\mathsf{input}(j)$, $\mathsf{const}(b)$, $\mathsf{xor}(a, b)$ and
+  $\mathsf{mux}(s, z, o)$, where $j, a, b, s, z, o \in \N$ and $b \in \{0, 1\}$. A circuit is a
+  list of nodes. The operands are positions of earlier nodes; a position that does not refer to
+  an earlier node reads the default wire (value $0$, label $0$).
+\end{definition}
+
+The multiplexer $\mathsf{mux}(s, z, o)$ outputs the value of $o$ if $s$ is $1$ and the value
+of $z$ otherwise; AND and OR are multiplexers with a constant candidate. Accepting arbitrary
+positions avoids carrying a well-formedness hypothesis through every statement.
+
+\begin{definition}[Plaintext evaluation]
+  \label{def:plain}
+  \lean{GcZk.plainNode, GcZk.plain}
+  \leanok
+  \uses{def:circuit}
+  For an input $x \colon \N \to \{0, 1\}$, the values of the nodes of $C$ are computed in order:
+  $x_j$, $b$, $v_a \oplus v_b$, and $v_o$ or $v_z$ according to $v_s$.
+\end{definition}
+
+\section{Garbling and evaluation}
+
+\begin{definition}[Labels of a bit]
+  \label{def:lab}
+  \lean{GcZk.lab}
+  \leanok
+  For a zero-label $L$ and a bit $b$, $\lab_\Delta(L, b) = L + b\,\Delta$.
+\end{definition}
+
+\begin{definition}[Garbling]
+  \label{def:garble}
+  \lean{GcZk.Seed, GcZk.Material, GcZk.garbleNode, GcZk.garble}
+  \leanok
+  \uses{def:circuit, def:lab}
+  The garbler's seed consists of $\Delta$ and the zero-labels of the inputs and of the
+  constants; the hash is a map $H \colon \N \times V \to V$ (gate position, label). The node at
+  position $i$ receives a zero-label $L_i$ and publishes some material:
+  \begin{itemize}
+    \item $\mathsf{input}(j)$: $L_i$ is the zero-label of input $j$; no material.
+    \item $\mathsf{const}(b)$: $L_i$ is the zero-label of the constant; the material is its
+    active label $\lab_\Delta(L_i, b)$.
+    \item $\mathsf{xor}(a, b)$: $L_i = L_a + L_b$ (Free XOR); no material.
+    \item $\mathsf{mux}(s, z, o)$: $L_i = H(i, L_s) + L_z$, and the material is the single
+    ciphertext
+    \[ T_i = H(i, L_s) + H(i, L_s + \Delta) + L_z + L_o . \]
+  \end{itemize}
+\end{definition}
+
+\begin{remark}[The multiplexer is a half-gate]
+  \label{rem:mux-half-gate}
+  Since $\mathsf{mux}(s, z, o) = z \oplus (s \wedge (z \oplus o))$, the multiplexer is an AND
+  gate whose first input $s$ is known to the evaluator, followed by a free XOR with $z$. The
+  evaluator half-gate of Zahur, Rosulek and Evans \cite[Sect.~3.1]{ZRE15} garbles $c = a \wedge b$,
+  with $a$ known to the evaluator and zero-labels $A$, $B$, by choosing the zero-label $C = H(A)$
+  and sending the single ciphertext $H(A) \oplus H(A \oplus R) \oplus B$, where $R$ is the global
+  offset. With $A = L_s$, $B = L_z + L_o$ (the zero-label of $z \oplus o$) and $R = \Delta$, this is
+  $T_i$, and the free XOR with $z$ turns $C$ into $L_i = H(i, L_s) + L_z$. The gate position $i$ in
+  the hash plays the role of their gate index. Garbling every AND gate this way, with free XOR
+  gates, is their privacy-free scheme \cite[Sect.~6]{ZRE15}.
+\end{remark}
+
+\begin{definition}[Evaluation]
+  \label{def:eval}
+  \lean{GcZk.Wire, GcZk.evalNode, GcZk.eval, GcZk.activeInputs}
+  \leanok
+  \uses{def:garble}
+  The evaluator knows the value and the active label of every wire. At a multiplexer with
+  selector value $v_s$ and active selector label $S$, it takes the candidate selected by $v_s$,
+  with active label $Y$, and outputs the label $H(i, S) + Y$, plus $T_i$ if $v_s = 1$. The active
+  inputs for $x$ are the labels $\lab_\Delta(L_j, x_j)$.
+\end{definition}
+
+\section{Correctness}
+
+\begin{lemma}[One step]
+  \label{lem:good-snoc}
+  \lean{GcZk.Good, GcZk.good_snoc}
+  \leanok
+  \uses{def:eval, def:plain}
+  If every evaluated wire so far carries its plaintext value $v$ and the label
+  $\lab_\Delta(L, v)$ of its zero-label $L$, the same holds after evaluating one more node.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Only the multiplexer needs a computation. If $v_s = 0$ the evaluator holds $S = L_s$ and gets
+  $H(i, L_s) + L_z + v_z \Delta = \lab_\Delta(L_i, v_z)$. If $v_s = 1$ it holds
+  $S = L_s + \Delta$ and gets
+  \[ H(i, L_s + \Delta) + L_o + v_o\Delta + T_i = H(i, L_s) + L_z + v_o \Delta , \]
+  since every other term appears twice and $V$ has characteristic $2$.
+\end{proof}
+
+\begin{theorem}[Correctness]
+  \label{thm:eval-garble}
+  \lean{GcZk.eval_garble}
+  \leanok
+  \uses{lem:good-snoc}
+  For every circuit $C$, seed, hash $H$ and input $x$, evaluating the garbling of $C$ on the active
+  inputs of $x$ gives, at every node $i$, the plaintext value $v_i$ and the label
+  $\lab_\Delta(L_i, v_i)$.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  Induction on the nodes, with Lemma~\ref{lem:good-snoc}.
+\end{proof}
+
+\begin{remark}
+  No hypothesis on $H$ or on $\Delta$ is needed: correctness is pure algebra in characteristic
+  $2$. It is the correctness of the scheme for an honest garbler.
+\end{remark}

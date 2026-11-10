@@ -1,0 +1,253 @@
+\chapter{A hash commitment instead of the ideal one}
+\label{chap:commitment}
+
+In this chapter the commitment functionality of Chapter~\ref{chap:jko} is replaced by the hash
+commitment $c = G(Z, r)$, where $G \colon V \times R \to D$ is a random oracle and $r$ is uniform in
+a finite set $R$. The oblivious transfer stays ideal. Zero knowledge becomes statistical, with a
+simulator that programs the oracle, and soundness becomes extraction plus a binding error.
+
+\section{Oracle runs}
+
+\begin{definition}[Runs]
+  \label{def:ans}
+  \lean{GcZk.Com.ans, GcZk.Com.Hits}
+  \leanok
+  A query strategy chooses each query from the previous answers. A run queries a point $p$ if one
+  of its queries is $p$.
+\end{definition}
+
+\begin{lemma}[Reprogramming an unqueried point]
+  \label{lem:ans-update}
+  \lean{GcZk.Com.ans_congr, GcZk.Com.ans_update}
+  \leanok
+  \uses{def:ans}
+  If a run does not query $p$, reprogramming the oracle at $p$ changes none of its answers.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Induction on the number of queries.
+\end{proof}
+
+\section{Zero knowledge}
+
+\begin{definition}[Malicious verifier and the three games]
+  \label{def:com-games}
+  \lean{GcZk.Com.MalV, GcZk.Com.msg, GcZk.Com.zw, GcZk.Com.realFin, GcZk.Com.simFin,
+    GcZk.Com.play, GcZk.Com.point, GcZk.Com.real, GcZk.Com.hyb, GcZk.Com.sim}
+  \leanok
+  \uses{def:view, lem:ans-update}
+  A malicious verifier runs in three phases with adaptive queries to $G$: $q_1$ queries and then
+  the material and the OT pairs; after the commitment, $q_2$ queries and then the opened seed;
+  after the prover's last message, $q_3$ queries and then its output bit. In the \emph{real}
+  execution the prover commits with $G(Z_w, r)$, where $Z_w$ is its output label, and sends
+  $(Z_w, r)$ if the opening passes the check. The \emph{simulator} commits to a uniform $c$, and if
+  the opening passes the check it computes $Z = L_{\mathrm{out}} + \Delta$ from the seed, sends
+  $(Z, r)$ and programs $G(Z, r) := c$. It does not use the witness. The \emph{hybrid} uses the real
+  commitment point $p = (Z_w, r)$, a uniform commitment $c$, and the oracle $G[p := c]$ after the
+  commitment.
+\end{definition}
+
+\begin{lemma}
+  \label{lem:sim-fin}
+  \lean{GcZk.Com.simFin_eq}
+  \leanok
+  \uses{def:com-games, lem:prover-label}
+  If $C(w) = 1$, the simulator's last message is the honest prover's. In the formalization the
+  hypothesis is that the prover's check is sound (Lemma~\ref{lem:check-sound-ot}), which for the
+  check of Definition~\ref{def:view} follows from $C(w) = 1$; the same hypothesis is used in
+  Lemma~\ref{lem:hyb-sim}.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Lemma~\ref{lem:prover-label}.
+\end{proof}
+
+\begin{lemma}[Real and hybrid]
+  \label{lem:hyb-real}
+  \lean{GcZk.Com.Bad₁, GcZk.Com.swap, GcZk.Com.ans₁_swap, GcZk.Com.point_swap,
+    GcZk.Com.bad₁_swap, GcZk.Com.swap_swap, GcZk.Com.hyb_eq_real,
+    GcZk.Com.card_hyb_eq_card_real}
+  \leanok
+  \uses{def:com-games}
+  If the first phase does not query $p$, swapping the value $G(p)$ with $c$ turns the hybrid into
+  the real execution. The swap is an involution on these pairs $(G, c)$, so the hybrid and the real
+  execution output $1$ equally often on them.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  By Lemma~\ref{lem:ans-update} the first phase, hence $p$, is the same for $G$ and for $G[p := c]$;
+  after the swap the real commitment is $G[p := c](p) = c$.
+\end{proof}
+
+\begin{lemma}[Hybrid and simulator]
+  \label{lem:hyb-sim}
+  \lean{GcZk.Com.Bad₂₃, GcZk.Com.hyb_eq_sim}
+  \leanok
+  \uses{def:com-games, lem:sim-fin}
+  The hybrid and the simulator agree unless the second phase, or the third phase after an abort,
+  queries $p$.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  After a successful opening both use $G[p := c]$ in the third phase, by Lemma~\ref{lem:sim-fin};
+  elsewhere apply Lemma~\ref{lem:ans-update}.
+\end{proof}
+
+\begin{theorem}[Statistical zero knowledge]
+  \label{thm:zk-rom}
+  \lean{GcZk.Com.card_real_le, GcZk.Com.card_sim_le, GcZk.Com.card_bad₁, GcZk.Com.card_bad₂₃,
+    GcZk.Com.sum_card_swap, GcZk.Com.sum_bad_le, GcZk.Com.zk_rom}
+  \leanok
+  \uses{lem:hyb-real, lem:hyb-sim}
+  For every malicious verifier and every witness $w$ with $C(w) = 1$, the probabilities that the
+  verifier outputs $1$ in the real execution and with the simulator differ by at most
+  \[ \frac{q_1 + q_2 + q_3}{|R|} . \]
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  By Lemmas~\ref{lem:hyb-real} and \ref{lem:hyb-sim}, the two probabilities differ by at most the
+  probability of the bad events. None of the queries involved depends on $r$: before the opening
+  the simulator does not use $r$, and after an abort it never reveals it. So each query hits
+  $p = (Z_w, r)$ for at most one value of $r$.
+\end{proof}
+
+\section{Soundness}
+
+\begin{definition}[Cheating prover and extractor]
+  \label{def:bind}
+  \lean{GcZk.Bind.Prover, GcZk.Bind.a₁, GcZk.Bind.qry₁, GcZk.Bind.com, GcZk.Bind.qry₂,
+    GcZk.Bind.opn, GcZk.Bind.Accept, GcZk.Bind.ExtWins}
+  \leanok
+  \uses{def:ans}
+  A cheating prover sees a view of the garbling, makes $q_1$ queries to $G$ and commits to $c$;
+  after the opening it makes $q_2$ queries and opens a point. The verifier accepts if the opened
+  point has the target label and its value is $c$. The extractor returns the label of the first
+  first-phase query answered with $c$. It does not see the opening, so it is an adversary for the
+  authenticity game.
+\end{definition}
+
+\begin{lemma}[Fiber bound]
+  \label{lem:fresh}
+  \lean{GcZk.Bind.card_fresh_le, GcZk.Bind.ans_update_of_avoid, GcZk.Bind.qry₁_update,
+    GcZk.Bind.a₁_update, GcZk.Bind.qry₂_update, GcZk.Bind.opn_update}
+  \leanok
+  \uses{lem:ans-update}
+  Let $p(G)$ be a point and $f(G)$ a value that do not change when $G$ is reprogrammed at $p(G)$.
+  Then $G(p(G)) = f(G)$ for at most a fraction $1/|D|$ of the oracles.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  The map $(G, x) \mapsto G[p(G) := x]$ is injective on the oracles with $G(p(G)) = f(G)$.
+\end{proof}
+
+\begin{lemma}
+  \label{lem:bad-of-accept}
+  \lean{GcZk.Bind.Coll, GcZk.Bind.Hit₂, GcZk.Bind.HitOpen, GcZk.Bind.bad_of_accept,
+    GcZk.Bind.card_coll_le, GcZk.Bind.card_hit₂_le, GcZk.Bind.card_hitOpen_le}
+  \leanok
+  \uses{def:bind, lem:fresh}
+  If the prover is accepted and the extractor does not win, then a fresh first-phase query got the
+  answer of an earlier, different one, or a fresh second-phase query got the answer $c$, or the opened point was
+  never queried and its value is $c$. Each of these events has probability at most $1/|D|$ for a
+  fixed pair, query or point.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  If the opened point was queried in the first phase, the first query answered with $c$ has a
+  different label, and the first occurrence of the opened point is fresh. Otherwise the first
+  occurrence of the opened point in the second phase, or the point itself, is fresh. In each case
+  apply Lemma~\ref{lem:fresh}.
+\end{proof}
+
+\begin{theorem}[Soundness with a hash commitment]
+  \label{thm:binding}
+  \lean{GcZk.Bind.card_accept_le, GcZk.Bind.prob_accept_le}
+  \leanok
+  \uses{lem:bad-of-accept}
+  The probability that the verifier accepts a cheating prover is at most the probability that the
+  extractor outputs the target label, plus
+  \[ \frac{q_1^2 + q_2 + 1}{|D|} . \]
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  Sum the bounds of Lemma~\ref{lem:bad-of-accept} over the $q_1^2$ pairs, the $q_2$ queries and the
+  opened point.
+\end{proof}
+
+\section{End-to-end soundness}
+
+\begin{definition}[Paired prover]
+  \label{def:pprover}
+  \lean{GcZk.E2E.cans, GcZk.E2E.replayG, GcZk.E2E.replayH, GcZk.E2E.PProver, GcZk.E2E.oH,
+    GcZk.E2E.target, GcZk.E2E.RealAccept}
+  \leanok
+  \uses{def:bind, def:games}
+  The cheating prover receives the material and the active labels of its OT input $x$, and at
+  each step makes one query to the garbling hash $H$ and one to the commitment oracle $G$. A prover
+  that interleaves its queries arbitrarily is of this form after padding. It makes $n_1$ steps,
+  commits, sees the opened seed, makes $n_2$ more steps and opens a point. The verifier accepts if
+  the point has the target label $L_{\mathrm{out}} + \Delta$ and its value is the commitment.
+\end{definition}
+
+\begin{lemma}[Replays]
+  \label{lem:replay}
+  \lean{GcZk.E2E.replayG_snoc, GcZk.E2E.replayH_snoc, GcZk.E2E.replayG_ans,
+    GcZk.E2E.replayH_answers, GcZk.E2E.cans_take, GcZk.E2E.toBind, GcZk.E2E.realAccept_iff}
+  \leanok
+  \uses{def:pprover}
+  For a fixed $H$, the prover answers its own $H$ queries and is a prover of
+  Definition~\ref{def:bind} for the oracle $G$, accepted exactly when the paired prover is. For a
+  fixed $G$, a strategy that answers its own $G$ queries is an adversary for the oracle $H$.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Induction on the number of steps.
+\end{proof}
+
+\begin{lemma}[The extractor is an authenticity adversary]
+  \label{lem:ext-auth}
+  \lean{GcZk.E2E.firstLabel, GcZk.E2E.extAdv, GcZk.E2E.extWins_garbleWin}
+  \leanok
+  \uses{lem:replay, def:games, thm:eval-garble}
+  For a fixed $G$, the extractor, which replays the first phase and outputs the label of the first
+  $G$ query answered with the commitment, is an adversary of Theorem~\ref{thm:garble-rom}. If $C$
+  is unsatisfiable and the extractor returns the target label, this adversary outputs the inactive
+  output label.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  On an unsatisfiable circuit the active output label is $L_{\mathrm{out}}$, by
+  Theorem~\ref{thm:eval-garble}, so the target $L_{\mathrm{out}} + \Delta$ is the inactive output
+  label.
+\end{proof}
+
+\begin{theorem}[End-to-end soundness]
+  \label{thm:e2e}
+  \lean{GcZk.E2E.card_accept_le, GcZk.E2E.prob_accept_le}
+  \leanok
+  \uses{thm:binding, lem:ext-auth, thm:garble-rom}
+  Let the seed of the verifier, the hash $H$ and the commitment oracle $G$ be uniform, and let $C$
+  be unsatisfiable. A cheating prover with $n_1$ steps before the commitment and $n_2$ after it is
+  accepted with probability at most
+  \[ \frac{n_1 + 1}{|V| - 1} + \frac{n_1^2 + n_2 + 1}{|D|} . \]
+  In the formalization the hypothesis on $C$ is weaker: $C(x) = 0$ for the input $x$ that the
+  prover gives to the OT, which is fixed in advance, with $x_j = 0$ for $j \geq k$.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  For fixed $H$ and seed, Theorem~\ref{thm:binding} and Lemma~\ref{lem:replay} bound acceptance by
+  the extractor's success plus $(n_1^2 + n_2 + 1)/|D|$. For fixed $G$, Lemma~\ref{lem:ext-auth} and
+  Theorem~\ref{thm:garble-rom} bound the extractor's success by $(n_1 + 1)/(|V| - 1)$. Sum over all
+  the randomness.
+\end{proof}

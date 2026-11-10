@@ -1,0 +1,28 @@
+\chapter{What is not formalized}
+\label{chap:limitations}
+
+We list the gaps between the statements above and a complete security proof.
+
+\begin{itemize}
+  \item \textbf{The real OT.} Soundness and zero knowledge are proved with the PVW OT
+  (Chapter~\ref{chap:pvw}); zero knowledge is reduced to DDH by explicit distinguishers. Lean has
+  no notion of efficient computation, so the efficiency of these distinguishers, like the hardness
+  of DDH itself, is outside the formalization. Soundness with the Chou--Orlandi OT is formalized
+  as a reduction (Theorem~\ref{thm:co-sound}): its bound contains the advantages of explicit square
+  Diffie--Hellman solvers, whose efficiency, like the hardness of the problem, is outside Lean.
+  \item \textbf{The hash.} Authenticity is proved with the hash as a random oracle. Outside that model,
+  correlation robustness alone is not enough to prove Free XOR secure, in the sense that a fully
+  black-box reduction is ruled out \cite[Sect.~3]{CKKZ12}; Choi,
+  Katz, Kumaresan and Zhou show that a circular form of it suffices \cite[Sect.~4, Definition~4 and
+  Theorem~1]{CKKZ12}.
+  \item \textbf{Implementations.} The formalization is about the abstract garbling scheme of
+  Chapter~\ref{chap:garbling}; no implementation of it is verified.
+  \item \textbf{Number of queries.} The adversaries make a fixed number of queries, in a fixed
+  pattern. Reducing an adversary that makes fewer queries, or interleaves them differently, to this
+  form by padding with dummy queries is stated in the introduction but not formalized.
+  \item \textbf{Adaptive corruptions and composition.} All statements assume static corruptions
+  and concern a single execution. Security against adaptive corruptions and universal composition
+  are discussed in Section~\ref{sec:corruptions} but not formalized.
+  \item \textbf{Cut-and-choose.} The consistency of the garbler's own inputs across the evaluated
+  copies is not modeled.
+\end{itemize}

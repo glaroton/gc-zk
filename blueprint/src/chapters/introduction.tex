@@ -1,0 +1,205 @@
+\chapter{Introduction}
+\label{chap:introduction}
+
+This blueprint describes the mathematics formalized in the Lean library gc-zk: zero-knowledge
+proofs built from privacy-free garbled circuits. Every definition and theorem below names its Lean
+counterpart, and the web version of this document has a dependency graph that shows how the
+results build on each other. All the statements in this document
+are proved in Lean, with no \texttt{sorry}, and the main theorems depend only on the standard
+axioms of Lean.
+
+\section*{Zero knowledge from garbled circuits}
+
+The idea of a garbled circuit is due to Yao, who presented it orally in the context of secure
+two-party computation; the construction does not appear in his written paper \cite{Yao86}, and its
+history is told by Bellare, Hoang and Rogaway \cite[Sect.~1]{BHR12b}. In 2013 Jawurek,
+Kerschbaum and Orlandi \cite{JKO13} observed that they also give an efficient zero-knowledge proof
+for any statement of the form ``I know $w$ with $C(w) = 1$'' for a Boolean circuit $C$. The roles
+are reversed: the verifier garbles $C$, the prover evaluates it on its witness, and the garbling
+is opened at the end so that the prover can check that it was honest. Since the prover knows its
+own input, the garbling does not need to hide anything from the evaluator, only to prevent it
+from forging output labels. Frederiksen, Nielsen and Orlandi \cite{FNO15} called such schemes
+\emph{privacy-free} and showed that they are considerably cheaper. With Free XOR \cite{KS08} and
+the half-gates of Zahur, Rosulek and Evans, XOR gates cost nothing and AND gates cost one
+ciphertext \cite[Sect.~6]{ZRE15}.
+
+The garbling scheme formalized here is the privacy-free scheme of Zahur, Rosulek and Evans
+\cite[Sect.~6]{ZRE15}: Free XOR, and for the non-linear gate their one-ciphertext evaluator
+half-gate \cite[Sect.~3.1]{ZRE15}, written as a multiplexer (Remark~\ref{rem:mux-half-gate}).
+Circuits are built from inputs, constants, XOR gates and multiplexers.
+
+\section*{What the protocol is for}
+
+The protocol is an interactive zero-knowledge proof of knowledge for statements of the form ``I
+know $w$ with $C(w) = 1$'', where $C$ is any Boolean circuit known to both parties. Its cost is
+proportional to the size of $C$ \cite[Sect.~1]{JKO13}, and it uses only symmetric primitives (a hash) besides the
+oblivious transfers, one per bit of the witness. It is therefore suited to statements without
+algebraic structure, for which the classical zero-knowledge protocols for discrete logarithms or
+other group relations do not apply.
+
+\emph{Typical uses.} The examples of Jawurek, Kerschbaum and Orlandi \cite[Sect.~1 and~1.1]{JKO13}
+are of this kind:
+\begin{itemize}
+  \item knowledge of a preimage, ``I know $x$ with $y = \mathrm{SHA\text{-}256}(x)$'' for a public
+  $y$;
+  \item knowledge of a key, ``I know $k$ with $y_1 = \mathrm{AES}_k(y_2)$'';
+  \item statements about data encrypted with a block cipher, for instance that part of a
+  ciphertext decrypts to a given value, without releasing the key;
+  \item knowledge of a signature, or of a Fiat--Shamir proof, without revealing it, which requires
+  proving statements about the hash function that instantiates the random oracle.
+\end{itemize}
+They report experiments for AES, MD5 and SHA-256 \cite[Sect.~5.2]{JKO13}. With the privacy-free
+half-gates garbling formalized here, the garbled circuit for ``I know $k$ such that
+$\mathrm{AES}(k, m) = c$'' takes about 108 kilobytes with 128-bit labels \cite[Sect.~6]{ZRE15}.
+
+\emph{What it does not give.}
+\begin{itemize}
+  \item \emph{It is interactive, and the proof convinces only the verifier.} The verifier's
+  messages are not just random challenges, so the protocol is not public-coin and the Fiat--Shamir
+  transformation does not apply \cite[Sect.~3, footnote~6]{JKO13}. The protocol as formalized here
+  has no non-interactive or publicly verifiable version: the verifier itself builds the garbled circuit and later opens it,
+  so a transcript is not evidence for anyone else. It does not fit settings where a proof must be
+  posted once and checked by many.
+  \item \emph{One garbling per proof.} At the end the verifier opens its seed, which reveals the
+  global offset $\Delta$, so a garbled circuit cannot be reused for another proof.
+\end{itemize}
+
+\emph{Ways to make it insecure.} Each of the following breaks a hypothesis of the theorems below,
+or makes their bounds useless.
+\begin{itemize}
+  \item \emph{Skipping the prover's check.} A malicious verifier can garble a circuit other than
+  $C$, or mount a selective-failure attack on the input phase \cite[Sect.~1]{JKO13}. Zero knowledge
+  rests on the prover committing to its output label, verifying the opened garbling against $C$
+  and the labels it received, and only then revealing the label (Theorem~\ref{thm:zk}). A prover
+  that reveals the label before the check, or that does not check, leaks information about its
+  witness; Proposition~\ref{prop:no-check-leaks} gives an explicit example.
+  \item \emph{Sending the garbled circuit before the oblivious transfers, or using an OT that lets
+  the prover choose its input late.} If the circuit is sent before the oblivious transfers, the
+  garbling must be secure against adaptive attacks \cite[Sect.~3, footnote~7]{JKO13}. The same
+  holds whenever the prover can choose its witness bits after seeing the garbled circuit.
+  This is the situation of the Chou--Orlandi OT, where a receiver can delay its decryption; it is
+  treated in Chapters~\ref{chap:adaptive} and~\ref{chap:co-soundness}.
+  \item \emph{Weak oblivious transfer keys.} With the PVW OT, a receiver key $(0, 0)$ makes every
+  ciphertext carry its message in the clear, so the sender must reject it
+  (Lemma~\ref{lem:pvw-ext}). With the Chou--Orlandi OT, a secret $a_j = 0$ makes the two masks of
+  input $j$ equal; this costs $k/q$ in the soundness bound (Theorem~\ref{thm:co-sound}).
+  \item \emph{An unsuitable hash.} Correlation robustness of the hash alone is not enough to prove
+  Free XOR secure: Choi, Katz, Kumaresan and Zhou rule out a fully black-box reduction
+  \cite[Sect.~3]{CKKZ12}. The theorems here assume a random oracle; for Free XOR in Yao's protocol
+  a circular form of correlation robustness suffices \cite[Sect.~4]{CKKZ12}.
+  \item \emph{Small parameters.} The bounds below are of order $q/|V|$ for $q$ hash queries; the
+  labels must be long enough (for instance 128 bits) for this to be negligible, and likewise the
+  commitment values and, with a real oblivious transfer, the order of the group.
+\end{itemize}
+
+\section*{No claim of originality}
+
+No originality is claimed for any definition, statement or proof idea in this library or in this
+document. The protocols, the security notions and the arguments come from the cited literature, or
+are standard in it; what is ours is only their formalization in Lean. Where we could not yet match a
+statement with a published one, we say so. Should any of them turn out to be new, this will be
+stated separately.
+
+\section*{Contents}
+
+Chapter~\ref{chap:variants} explains how the order of the messages (when the witness is fixed, when
+the garbling is opened) and the choice of commitment and oblivious transfer determine the security
+that can be proved, discusses security against adaptive corruptions, and points to the theorems
+that cover each case. Chapter~\ref{chap:garbling} defines circuits, the garbling and the evaluation, and proves
+correctness. Chapter~\ref{chap:jko} formalizes the protocol of \cite{JKO13} in the hybrid model
+with ideal oblivious transfer and commitment, and proves completeness, perfect zero knowledge
+against a malicious verifier, and soundness by reduction to authenticity.
+Chapter~\ref{chap:authenticity} shows that $\Delta$ reaches the evaluator only through the hashes
+of inactive labels, and Chapter~\ref{chap:random-oracle} bounds the authenticity advantage of a
+$q$-query adversary in the random oracle model by $(q+1)/(|V|-1)$, for the real garbling with
+uniform zero-labels. Chapter~\ref{chap:commitment} replaces the ideal commitment by a hash
+commitment in the random oracle model, with statistical zero knowledge and soundness by
+extraction. Chapter~\ref{chap:ot} replaces the ideal OT by the Chou--Orlandi OT and proves zero
+knowledge with both real components. Chapter~\ref{chap:pvw} uses instead the dual-mode OT of
+Peikert, Vaikuntanathan and Waters \cite{PVW08}, which realizes the OT functionality of
+\cite{JKO13}: soundness holds in messy mode, and zero knowledge is reduced to DDH by explicit
+distinguishers. With the Chou--Orlandi OT the prover can choose its input after seeing the garbled
+circuit, so soundness needs \emph{adaptive} authenticity: Chapter~\ref{chap:adaptive} proves that
+an adversary that interleaves hash queries and label requests wins with probability at most
+$(q+1)/(|V|-1) + q/|V|$, and Chapter~\ref{chap:co-soundness} uses it to prove soundness with the
+Chou--Orlandi OT, by reduction to the square Diffie--Hellman problem.
+Chapter~\ref{chap:cut-and-choose} contains the cut-and-choose bounds against a malicious garbler,
+derived from the garbling, and Chapter~\ref{chap:limitations} lists what is not formalized.
+
+\section*{The model}
+
+All the security statements are information-theoretic statements in idealized models (the random
+oracle model \cite{BR93}, and the hybrid models of \cite{JKO13}), or reductions to explicit
+adversaries against DDH and square Diffie--Hellman. They are proved by counting: a probability is
+the proportion of the randomness on which an event holds, and the proofs are sequences of games
+\cite{Sho04} in which ``identical until bad'' \cite{BR06} becomes an injection between sets of
+randomness. Adversaries are deterministic; a randomized adversary is a family of them indexed by
+its coins, and every bound holds for each member of the family, hence on average. The numbers of
+queries are fixed; an adversary that makes fewer queries, or interleaves its queries to several
+oracles differently, is brought to this form by padding with dummy queries, an argument that is
+stated but not formalized. Lean has no notion of efficient computation, so polynomial-time
+constraints, and the efficiency of the reductions, are outside the formalization.
+
+\emph{Notation.} Labels live in a vector space $V$ over $\F$, and $\Delta \in V$ is the global
+offset. The letter $q$ has two uses: in Chapters~\ref{chap:random-oracle} and~\ref{chap:adaptive}
+it is the number of queries (or actions) of the adversary; in Chapters~\ref{chap:ot},
+\ref{chap:pvw} and~\ref{chap:co-soundness} it is the order of the group $\mathbb{G}$ with
+generator $g$, and numbers of queries are written $q_0, \dots, q_3$, $Q$ or $n_0, n_1, n_2$. From
+Chapter~\ref{chap:commitment} on, $G$ is the commitment oracle, distinct from the group
+$\mathbb{G}$. A
+circuit input is $x$ (or the witness $w$), and $b$ is a bit, except in the oblivious transfers,
+where $b$ is the receiver's secret exponent. In Chapter~\ref{chap:pvw}, $b$ is also the branch of
+the cryptosystem, and $x_0$, $x_1$, $x$, $y$ are exponents of the common string.
+
+\section*{Related work}
+
+\emph{Formalized cryptography.} Game-based cryptographic proofs have been mechanized in several
+frameworks, among them EasyCrypt (see \cite{ABB+17}), CryptHOL in Isabelle/HOL \cite{BLS20},
+SSProve in Coq \cite{HRV+23}, and, in Lean~4, VCVio \cite{TDW+26} and CatCrypt \cite{Spi26}. Closest to the present library are the EasyCrypt verification of
+Yao's secure function evaluation protocol, with a formalization of garbled circuits in the framework
+of Bellare, Hoang and Rogaway \cite{ABB+17, BHR12b}, and the formalization of simulation-based
+security of multi-party computation in Isabelle/HOL by Butler, Aspinall and Gascón \cite{BAG17}.
+In Lean~4, Dziembowski, Fabia\'nski, Micciancio and Stefa\'nski formalize the computational
+soundness of a symbolic framework and, as an extended example, the simulation-based privacy of a
+garbling scheme taken from Li and Micciancio, proved symbolically \cite[Sect.~3]{DFMS26}.
+Among its 172 protocols, CatCrypt lists Yao's garbled circuits with half-gates, row reduction and
+Free XOR, and a DDH-based ``Simplest OT'' \cite[Sect.~4]{Spi26}; its protocol sources are in a
+private repository \cite[Sect.~7]{Spi26} (only the core is public), so we have not compared its definitions or bounds with ours. As of
+November 2026, the README of the public core also lists machinery for universal composability: UC
+emulation, the dummy-adversary theorem and a composition law, and says that the
+universal-composability theory itself is in separate distributions \cite{CCcore}.
+We are not aware of a previous formalization of zero knowledge from garbled circuits or of
+privacy-free garbling. The present library does not use a general framework: its probabilities are counts over
+finite types, and its games are written directly as functions of the randomness.
+
+\emph{Adaptive garbling.} Adaptive security of garbling, where the input is chosen after the
+garbled circuit, was introduced by Bellare, Hoang and Rogaway \cite{BHR12}, who define adaptive
+privacy \cite[Sect.~3, Fig.~2]{BHR12} and adaptive obliviousness and authenticity
+\cite[Sect.~4, Fig.~6]{BHR12}, and give transforms that
+make any statically secure scheme adaptively secure. Hemenway, Jafargholi, Ostrovsky, Scafuro and
+Wichs prove simulation-based adaptive security, a privacy notion, for a modification of Yao's scheme
+under one-way functions \cite[Sect.~3 and~5]{HJO+16}; Jafargholi and Wichs prove the same notion for
+Yao's scheme itself, unmodified, with a security loss governed by a pebbling game
+\cite[Sect.~3 and Theorem~1]{JW16}. Adaptive security of unmodified half-gates was studied in idealized models by Barnum,
+Heath, Kolesnikov and Ostrovsky \cite{BHKO26} and by Guo, Yang, Wang, Yu and Liu \cite{GYWYL}.
+Chapter~\ref{chap:adaptive} needs adaptive authenticity of unmodified privacy-free garbling, for
+which we have not found a published statement.
+Ganesh, Kondi, Patra and Sarkar \cite[Sect.~3]{GKPS18} show that the protocol of \cite{JKO13} is secure
+against \emph{adaptive corruptions} when the oblivious transfer satisfies a mild adaptive security
+guarantee; this is a different notion from the adaptive choice of the input considered here.
+
+\emph{The Chou--Orlandi OT.} The issue that motivates Chapters~\ref{chap:adaptive}
+and~\ref{chap:co-soundness}, that a receiver can delay the decryption, was pointed out by Byali,
+Patra, Ravi and Sarkar \cite[Sect.~3]{BPRS17} and discussed by Doerner, Kondi, Lee and shelat
+\cite[App.~A]{DKLs18}, who add a verification step to the protocol; Chou and Orlandi refer to both
+\cite[Sect.~1.1]{CO15} and withdraw the claim of UC security of their protocol.
+
+\section*{How this library was written}
+
+The author chose the protocol, the model and the statements, and reviewed the results. The Lean
+proofs were written by the AI assistant Claude (Anthropic) working under his direction, and so was
+a first draft of the pen-and-paper arguments of Chapters~\ref{chap:adaptive}
+and~\ref{chap:co-soundness} (the linear parts of labels, the bad steps, and the reduction with
+guessed key queries), which the author then reviewed. Correctness does not depend on trusting
+either of them: Lean checks every proof. The formalization uses Lean~4 \cite{MU21} and
+Mathlib \cite{Mathlib20}, and this document is built with leanblueprint \cite{Mas}.

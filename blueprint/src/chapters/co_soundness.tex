@@ -1,0 +1,343 @@
+\chapter{Soundness with the Chou--Orlandi OT}
+\label{chap:co-soundness}
+
+\textbf{Status.} Everything in this chapter is formalized, and no originality is claimed. The
+bound is a reduction: the hardness of square Diffie--Hellman is not assumed in Lean, and the
+efficiency of the solvers is outside the formalization, as for the DDH distinguishers of
+Chapter~\ref{chap:pvw}. It assembles three formalized results: the binding bound of
+Theorem~\ref{thm:binding}, used as in the end-to-end argument of Theorem~\ref{thm:e2e}, adaptive
+authenticity (Theorem~\ref{thm:adaptive}) and the difference of the two key points
+(Lemma~\ref{lem:keys-sub}). The new ingredient is a simulation of the OT
+layer by label requests (Lemma~\ref{lem:co-ot-sim}), and the reduction of the event that the
+prover queries both key points of an input to square Diffie--Hellman (Lemma~\ref{lem:co-sqdh}).
+Both are proved in full below.
+
+\section{The game}
+
+\begin{definition}[Soundness game with the Chou--Orlandi OT]
+  \label{def:co-game}
+  \lean{GcZk.CO.FullProver, GcZk.CO.Accept, GcZk.CO.Ext}
+  \leanok
+  \uses{def:adaptive-game, def:garble}
+  The group $\mathbb{G}$ has prime order $q$ and $g$ is a generator. The verifier samples, for each input
+  $j < k$, a secret $a_j \in \mathbb{Z}_q$ and sends $A_j = a_j
+  g$; the seed $(\Delta, L, L_c)$, with $\Delta$ uniform in $V \setminus \{0\}$; and three
+  independent random oracles: the hash $H$ of the
+  garbling, the key hash $H_K(j, \cdot) : \mathbb{G} \to V$ of the OT (separated from $H$ by its domain), and
+  the commitment oracle $G$. The cheating prover
+  \begin{enumerate}
+    \item sees $A$, makes $n_0$ queries to $H_K$, and sends $B_j$ for every $j$;
+    \item sees the material and the masked label pairs $e_j = (L_j + H_K(j, a_j B_j),\; L_j + \Delta
+    + H_K(j, a_j(B_j - A_j)))$, makes $n_1$ steps, each with one query to $H$, $H_K$ and $G$, and
+    commits $c$;
+    \item sees the seed and the secrets $a_j$, makes $n_2$ steps, and opens $(z, r)$.
+  \end{enumerate}
+  The verifier accepts if $z$ is the $1$-label of the output and $G(z, r) = c$.
+\end{definition}
+
+\begin{theorem}[Soundness with the Chou--Orlandi OT, expected form]
+  \label{thm:co-sound}
+  \lean{GcZk.CO.prob_accept_le, GcZk.CO.card_accept_parts, GcZk.CO.accept_iff,
+    GcZk.CO.ext_of_extWins, GcZk.CO.card_zero_le}
+  \leanok
+  \uses{def:co-game, cor:co-ot, cor:co-sqdh, thm:adaptive, thm:binding}
+  For an unsatisfiable circuit, the verifier accepts with probability at most
+  \[ \frac{Q + 1}{|V| - 1} + \frac{Q}{|V|} + \frac{k}{q}
+     + \sum_{j < k} \sum_{i \neq i' < n_K} \mathrm{Adv}_{\mathrm{sqDH}}(S_{j,i,i'})
+     + \frac{n_1^2 + n_2 + 1}{|D|} , \]
+  where $Q = 2(k + n_1)$ is the number of actions of the adversary of Lemma~\ref{lem:co-ot-sim} in the
+  adaptive game, $n_K = n_0 + n_1$ is the number of key queries, and $S_{j,i,i'}$ are explicit
+  square Diffie--Hellman solvers built from the prover (Definition~\ref{def:co-solver}). A solver
+  depends on the commitment oracle $G$ and on $\Delta$, and $\mathrm{Adv}_{\mathrm{sqDH}}(S_{j,i,i'})$
+  is the probability, over a uniform $\alpha \in \mathbb{Z}_q$ and the coins of the solver, that it
+  outputs $\alpha^2 g$ on input $\alpha g$, averaged over $G$ and $\Delta \neq 0$. The advantages are added,
+  not averaged, over the $k\, n_K (n_K - 1)$ solvers.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  \emph{Binding.} Fix $(a, H_K, J_K, \rho)$. Then the prover is a prover for the commitment oracle
+  $G$ alone, as in Theorem~\ref{thm:e2e}: it answers its queries to $H$ and $H_K$ itself. Its
+  acceptance costs at most the probability, over $G$, of the event $\mathrm{Ext}$ that the first query
+  of step~2 to $G$ answered with the commitment is at the target, plus $(n_1^2 + n_2 + 1)/|D|$
+  (Theorem~\ref{thm:binding}).
+
+  \emph{The OT layer.} Fix $G$. The event $\mathrm{Ext}$ is contained in $\mathrm{Zero} \cup
+  (\mathrm{Both} \setminus \mathrm{Zero}) \cup (\mathrm{Ext} \setminus (\mathrm{Zero} \cup
+  \mathrm{Both}))$. The first has probability at most $k/q$, since each $a_j$ is uniform. The second
+  is bounded by Corollary~\ref{cor:co-sqdh}, and the third by Corollary~\ref{cor:co-ot}.
+
+  Averaging the first bound over $(a, H_K, J_K, \rho)$ and the second over $G$ gives the claim.
+\end{proof}
+
+\section{The OT layer}
+\label{sec:co-ot}
+
+Throughout this section $G$ is fixed, and so are the circuit, the prover and the numbers of
+queries; the circuit is unsatisfiable, so its output has value $0$ on every input and the target
+label $Z_{\mathrm{out}} + \Delta$ is the inactive output label for every input. We use the
+adaptive game of Definition~\ref{def:adaptive-lean}: its randomness is $\rho = (L, L_c, H, J)$,
+with $\Delta \neq 0$ a separate parameter, its adversary sees the real material and then takes $Q$ actions, each a query to $H$ or a
+label request, and only the first request of an input counts.
+
+\begin{definition}[Key points and early queries]
+  \label{def:co-keys}
+  \lean{GcZk.CO.key, GcZk.CO.Early, GcZk.CO.HitsKey, GcZk.CO.Both, GcZk.CO.Zero,
+    GcZk.CO.key_ne}
+  \leanok
+  \uses{def:co-game}
+  In a run of the prover, let $B_j$ be its message for input $j$. The \emph{key points} of $j$ are
+  $K^0_j = a_j B_j$ and $K^1_j = a_j (B_j - A_j)$; they differ by $a_j A_j = a_j^2 g$
+  (Lemma~\ref{lem:keys-sub}), so they are distinct when $a_j \neq 0$. A query to $H_K$ is \emph{at}
+  $K^c_j$ if it is the point $(j, K^c_j)$; the key hash is separated by the index $j$, so a query
+  $(j', K^c_j)$ with $j' \neq j$ is not at a key point of $j$. The key point $K^c_j$ is \emph{early}
+  ($\mathrm{Pre}^c_j$) if some query of step~1, before $B$ is sent, is at it. We write
+  $\mathrm{Zero}$ for the event that some $a_j = 0$, and $\mathrm{Both}$ for the event that, for
+  some $j$, the prover queries both $K^0_j$ and $K^1_j$ before it commits.
+\end{definition}
+
+\begin{definition}[The adversary $\mathcal{A}_\gamma$]
+  \label{def:co-adv}
+  \lean{GcZk.CO.adv}
+  \leanok
+  \uses{def:co-keys, def:adaptive-lean}
+  The coins are $\gamma = (a, H_K', e')$ with $a \in \mathbb{Z}_q^k$, $H_K' : [k] \times \mathbb{G} \to V$
+  and $e' \in (V \times V)^k$. The adversary $\mathcal{A}_\gamma$ of the adaptive game runs the
+  prover as follows.
+  \begin{enumerate}
+    \item It sends $A_j = a_j g$, answers the queries of step~1 with $H_K'$, and obtains $B$; it
+    computes the key points and the early ones (it knows $a$).
+    \item For each $j$ and $c \in \{0, 1\}$: if $K^c_j$ is early, it requests the bit $c$ of input
+    $j$, receives $X$, and puts $e_{j,c} = X + H_K'(j, K^c_j)$; otherwise $e_{j,c} = e'_{j,c}$. It
+    gives the prover the material of the game and $e$.
+    \item At each step of step~2 it forwards the query to $H$ to the game, answers the query to $G$
+    with $G$, and answers the query $(j, P)$ to $H_K$ as follows. If $P = K^c_j$, $K^c_j$ is not
+    early, and this is the first query at $K^c_j$, it requests the bit $c$ of input $j$, receives
+    $X$, and answers $e_{j,c} + X$; a later query at the same point gets the same answer. Every
+    other query gets $H_K'(j, P)$.
+    \item Its guess is the first component of the first query of step~2 to $G$ whose answer is the
+    commitment, and $0$ if there is none.
+  \end{enumerate}
+  It makes $n_1$ queries to $H$ and at most $2k$ requests. In the formalization each input gets two
+  actions before the masked pairs and each step two actions after them (a request or a query to $H$
+  outside the circuit, which answers $0$ and is never bad), so it takes exactly $Q = 2(k + n_1)$
+  actions; a request is made at every query at a key point that is not early, not only the first,
+  and the game answers repeated requests consistently.
+\end{definition}
+
+The answer $e_{j,c} + X$ is the value of $H_K(j, K^c_j)$ that unmasks $e_{j,c}$ to $X$, since
+$e_{j,c} = X + H_K(j, K^c_j)$ in characteristic $2$.
+
+\begin{definition}[The map to the coins]
+  \label{def:co-map}
+  \lean{GcZk.CO.Φ}
+  \leanok
+  \uses{def:co-keys, def:co-adv}
+  The real randomness is $\omega = (a, H_K, J_K, \rho)$, where $J_K \in (V \times V)^k$ is junk that
+  the game does not use (it only makes the two sides of the same size). Let $e$ be the real masked
+  pairs of the run of $\omega$. The map $\Phi$ sends $\omega$ to $(\gamma, \rho)$ with $\gamma = (a,
+  H_K', e')$, where, for every $j$ and $c$ such that $K^c_j$ is not early,
+  $H_K'(j, K^c_j) = J_{K, j, c}$ and $e'_{j,c} = e_{j,c}$, and, for every early $K^c_j$,
+  $e'_{j,c} = J_{K, j, c}$; at all other points $H_K' = H_K$. Without $\mathrm{Zero}$ the two key
+  points of an input are distinct, so these replacements do not collide.
+\end{definition}
+
+\begin{lemma}[The OT as label requests]
+  \label{lem:co-ot-sim}
+  \lean{GcZk.CO.run_eq, GcZk.CO.Φ_injOn, GcZk.CO.realWin_of_ext, GcZk.CO.cs_Φ,
+    GcZk.CO.eSim_Φ, GcZk.CO.answer_eq}
+  \leanok
+  \uses{def:co-map}
+  Let $\omega$ be outside $\mathrm{Zero}$ and $\mathrm{Both}$, and $\Phi(\omega) = (\gamma, \rho)$.
+  \begin{enumerate}
+    \item \emph{(Same run.)} The run of the prover in the real game with $\omega$, up to its
+    commitment, is its run inside $\mathcal{A}_\gamma$ playing the adaptive game with $\rho$.
+    \item \emph{(Injectivity.)} $\Phi$ is injective on the complement of $\mathrm{Zero} \cup
+    \mathrm{Both}$.
+    \item \emph{(Wins.)} If, in the real run, the first query of step~2 to $G$ answered with the
+    commitment is at the target label, then $\mathcal{A}_\gamma$ wins the adaptive game with $\rho$.
+  \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  \emph{Step 1 of the prover.} We show by induction on the queries of step~1 that the answers
+  coincide. A query $(j, P)$ is answered with $H_K(j, P)$ in the real game and with $H_K'(j, P)$ by
+  $\mathcal{A}_\gamma$. These differ only if $P = K^c_j$ with $K^c_j$ not early; but a query of
+  step~1 at $K^c_j$ makes $K^c_j$ early. So the answers agree, the two runs of step~1 coincide, and
+  $\mathcal{A}_\gamma$ computes the real $B$, the real key points and the real early ones.
+
+  \emph{The masked pairs.} Fix $j$. Without $\mathrm{Both}$, at most one of $K^0_j, K^1_j$ is early.
+  If $K^c_j$ is early, the request of $\mathcal{A}_\gamma$ for the bit $c$ of $j$ is the first
+  request of input $j$, so the game answers $X = L_j + c\Delta$, and $e_{j,c} = L_j + c\Delta +
+  H_K'(j, K^c_j) = L_j + c\Delta + H_K(j, K^c_j)$, the real value, since $H_K'$ keeps the early key
+  points. If $K^c_j$ is not early, $e_{j,c} = e'_{j,c}$ is the real value by definition. The material
+  of the adaptive game with $\rho$ is the real material. So the prover receives the same messages.
+
+  \emph{Step 2 of the prover.} By induction on the steps: the queries to $H$ and to $G$ are answered
+  by the same oracles. Let $(j, P)$ be a query to $H_K$. If $P = K^c_j$ with $K^c_j$ not early, and it
+  is the first query at that point, then no request of input $j$ was made before: a request at the
+  masked pairs would mean $K^{1-c}_j$ is early, an earlier request in step~2 would mean a query at
+  $K^{1-c}_j$, and either one, with the present query, is $\mathrm{Both}$. So the game answers $X =
+  L_j + c\Delta$, and $\mathcal{A}_\gamma$ answers $e_{j,c} + X = H_K(j, K^c_j)$, the real answer; a
+  repeated query gets the same answer in both. Any other query is answered with $H_K'(j, P)$, which
+  is $H_K(j, P)$ because $P$ is not a replaced point. This proves the first claim.
+
+  \emph{Injectivity.} Let $\Phi(\omega) = (\gamma, \rho)$. Then $a$ and $\rho$ are read off
+  directly. Running the prover's step~1 with $H_K'$ gives, by the first part, the real $B$, hence the
+  key points and the early ones. Off the replaced points, $H_K = H_K'$. At a key point $K^c_j$ that is
+  not early, $H_K(j, K^c_j) = e'_{j,c} + L_j + c\Delta$ and $J_{K,j,c} = H_K'(j, K^c_j)$; at an early
+  one, $J_{K,j,c} = e'_{j,c}$. So $\omega$ is determined by $\Phi(\omega)$.
+
+  \emph{Wins.} By the first claim the guess of $\mathcal{A}_\gamma$ is the first component of the
+  first query of step~2 to $G$ answered with the commitment, the same as in the real run, so it is
+  the target label. The target is $Z_{\mathrm{out}} + \Delta$, and the active output label is
+  $Z_{\mathrm{out}}$ for every input, since the output value is $0$ on every input. So the guess is
+  the active output label plus $\Delta$ for the input that $\mathcal{A}_\gamma$ requested, which is
+  a win.
+\end{proof}
+
+\begin{corollary}[The OT layer, counting form]
+  \label{cor:co-ot}
+  \lean{GcZk.CO.card_ext_le}
+  \leanok
+  \uses{lem:co-ot-sim, thm:adaptive}
+  For fixed $G$, summed over $\Delta \neq 0$, the real randomness for which the first query of
+  step~2 to $G$ answered with the commitment is at the target, outside $\mathrm{Zero} \cup
+  \mathrm{Both}$, is at most the sum over $\gamma$ of the randomness $\rho$ for which
+  $\mathcal{A}_\gamma$ wins. By Theorem~\ref{thm:adaptive}, with $\Delta$ and $\omega$ uniform, its
+  probability is at most $(Q + 1)/(|V| - 1) + Q/|V|$.
+\end{corollary}
+
+\begin{proof}
+  \leanok
+  For each $\Delta$, $\Phi$ maps this set injectively (Lemma~\ref{lem:co-ot-sim}) into the pairs
+  $(\gamma, \rho)$ with the same $\Delta$ for which $\mathcal{A}_\gamma$ wins. The real randomness
+  and the pairs have the same number of elements, since $(H_K, J_K)$ and $(H_K', e')$ do. For each
+  $\gamma$, Theorem~\ref{thm:adaptive} bounds the sum over $\Delta$ of the winning $\rho$.
+\end{proof}
+
+\section{Both key points}
+
+We bound the event $\mathrm{Both}$ input by input. Fix $j$. The key queries of the prover are
+numbered $0, 1, \dots, n_K - 1$ in the order they are made, through steps~1 and~2, up to the
+commitment ($n_K = n_0 + n_1$); a key query is any query to $H_K$, whatever its index. For the event
+$\mathrm{Both}_j$, let $i$ and $i'$ be the numbers of the first key queries at $(j, K^0_j)$ and at
+$(j, K^1_j)$; we write $\mathrm{Both}_{j,i,i'}$ for this event. Without $\mathrm{Zero}$ the two key
+points are distinct, so $i \neq i'$, and the sums below run over the pairs $i \neq i'$. In this section $\Delta \neq 0$ and the commitment oracle $G$ are fixed; the
+solvers depend on them.
+
+\begin{definition}[The solver $S_{j,i,i'}$]
+  \label{def:co-solver}
+  \lean{GcZk.CO.solver, GcZk.CO.kOr, GcZk.CO.sim₀, GcZk.CO.sim₁}
+  \leanok
+  \uses{def:co-keys}
+  The coins are $\sigma = (a_{-j}, \rho, H_K^*, e^*, J^*)$: the secrets of the other inputs, the
+  randomness $\rho$ of the garbling, a key hash $H_K^* : [k] \times \mathbb{G} \to V$, a pair $e^* \in V
+  \times V$, and junk $J^* \in (V \times V)^{k - 1}$ that it does not use. In the formalization
+  the coins have the type of the real randomness, with $a_j = 0$ and $e^*$ stored as the junk of
+  $j$. Given $A \in \mathbb{G}$, the
+  solver $S_{j,i,i'}$ runs the verifier and the prover, with $A_j = A$ and $A_{j'} = a_{j'} g$ for
+  $j' \neq j$, as follows.
+  \begin{enumerate}
+    \item It garbles with $\rho$. For $j' \neq j$ it computes the masked pair $e_{j'}$ as the
+    verifier does, with $H_K^*$, since it knows $a_{j'}$. For $j$ it sends $e_j = e^*$.
+    \item It answers the key queries in order. The query number $i$, at a point $(j_i, P_i)$, gets
+    $e^*_0 + L_j$, and the query number $i'$, at $(j_{i'}, P_{i'})$, gets $e^*_1 + L_j + \Delta$. A
+    later query at the same point as query $i$ (resp.\ $i'$) gets the same answer. Every other key
+    query $(j'', P)$ gets $H_K^*(j'', P)$. It answers $H$ with the $H$ of $\rho$ and $G$ with $G$.
+    \item It outputs $P_i - P_{i'}$; the prover makes exactly $n_K$ key queries before it commits,
+    so both points exist for $i, i' < n_K$.
+  \end{enumerate}
+  The solver does not use $a_j$: it only needs $A$, through the prover's view.
+\end{definition}
+
+In the language of Theorem~\ref{thm:sqdh}, for fixed $\sigma$ the points $A \mapsto P_t$ of the
+key queries of this simulated run form a receiver, and $S_{j,i,i'}$ is its solver for the pair
+$(i, i')$. The receiver depends on $(i, i')$, because the answers to the queries $i$ and $i'$ do.
+
+\begin{definition}[The map to the solver's coins]
+  \label{def:co-solver-map}
+  \lean{GcZk.CO.Ψ}
+  \leanok
+  \uses{def:co-solver, def:co-map}
+  Let $\omega = (a, H_K, J_K, \rho)$ be outside $\mathrm{Zero}$, with real masked pairs $e$ and key
+  points $K^0_j, K^1_j$. The map $\Psi_j$ sends $\omega$ to $(a_j, \sigma)$ with $\sigma = (a_{-j},
+  \rho, H_K^*, e^*, J^*)$, where $e^* = e_j$, $J^* = (J_{K, j'})_{j' \neq j}$, and $H_K^*$ is $H_K$
+  with its values at $(j, K^0_j)$ and $(j, K^1_j)$ replaced by $J_{K,j,0}$ and $J_{K,j,1}$.
+\end{definition}
+
+\begin{lemma}[Both key points]
+  \label{lem:co-sqdh}
+  \lean{GcZk.CO.sim₀_eq, GcZk.CO.sim₁_eq, GcZk.CO.kOr_eq, GcZk.CO.wins_Ψ, GcZk.CO.Ψ_injOn}
+  \leanok
+  \uses{def:co-solver-map, lem:keys-sub}
+  Let $\omega$ be outside $\mathrm{Zero}$, in $\mathrm{Both}_{j,i,i'}$, and $\Psi_j(\omega) = (a_j,
+  \sigma)$.
+  \begin{enumerate}
+    \item \emph{(Same run.)} The run of the prover in the real game with $\omega$, up to its
+    commitment, is its run inside $S_{j,i,i'}$ with coins $\sigma$ and input $A = a_j g$.
+    \item \emph{(Injectivity.)} $\Psi_j$ is injective on $\mathrm{Both}_{j,i,i'} \setminus
+    \mathrm{Zero}$.
+    \item \emph{(Wins.)} $S_{j,i,i'}$ with coins $\sigma$ wins on $a_j$: it outputs $a_j^2 g$.
+  \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  \emph{Same run.} The material and the masked pairs agree: the solver garbles with the real
+  $\rho$; for $j' \neq j$ it computes $e_{j'}$ with $H_K^*$, which agrees with $H_K$ at index $j'$;
+  and $e^* = e_j$. The answers to $H$ and $G$ agree. We show by induction on the key queries that
+  their answers agree. Let the query number $t$ be at $(j'', P)$.
+  \begin{itemize}
+    \item If $t = i$: the point is $(j, K^0_j)$, and the real answer is $H_K(j, K^0_j) = e_{j,0} +
+    L_j$, which is the solver's answer $e^*_0 + L_j$. Likewise for $t = i'$, with $H_K(j, K^1_j) =
+    e_{j,1} + L_j + \Delta$.
+    \item If $t$ is later than $i$ and the point is $(j, K^0_j)$, both answers are those of the query
+    $i$; likewise for $i'$.
+    \item Otherwise the point is not a key point of $j$: an earlier query there would contradict
+    the choice of $i$ or $i'$ as the first ones. So $H_K^*(j'', P) = H_K(j'', P)$, the real answer.
+  \end{itemize}
+  Since the answers agree, so do the queries, including $B$, which the prover computes from them.
+
+  \emph{Wins.} By the first part, $P_i = K^0_j$ and $P_{i'} = K^1_j$, so the output is $K^0_j -
+  K^1_j = a_j B_j - a_j(B_j - A_j) = a_j A_j = a_j^2 g$ (Lemma~\ref{lem:keys-sub}).
+
+  \emph{Injectivity.} Let $\omega \in \mathrm{Both}_{j,i,i'} \setminus \mathrm{Zero}$. From $(a_j, \sigma)$ we read $a$, $\rho$, $e_j = e^*$ and $J_{K,j'}$ for $j'
+  \neq j$. Running the prover with $H_K^*$ gives, by the first part, the real $B$, hence $K^0_j$ and
+  $K^1_j$, which are distinct since $a_j \neq 0$. Then $H_K = H_K^*$ off these two points,
+  $H_K(j, K^0_j) = e^*_0 + L_j$, $H_K(j, K^1_j) = e^*_1 + L_j + \Delta$, and $J_{K,j,c} = H_K^*(j,
+  K^c_j)$. So $\omega$ is determined.
+\end{proof}
+
+The first part uses $\mathrm{Both}_{j,i,i'}$ only through the choice of $i$ and $i'$ as the first
+queries at the key points. The injectivity uses the first part, so it holds on
+$\mathrm{Both}_{j,i,i'} \setminus \mathrm{Zero}$ for fixed $i$ and $i'$, and not on the whole
+complement of $\mathrm{Zero}$.
+
+\begin{corollary}[Both key points, counting form]
+  \label{cor:co-sqdh}
+  \lean{GcZk.CO.card_both_le}
+  \leanok
+  \uses{lem:co-sqdh}
+  With $\omega$ uniform,
+  \[ \Pr[\mathrm{Both} \wedge \neg\mathrm{Zero}] \le \sum_{j < k} \sum_{i \neq i' < n_K}
+     \Pr_{a_j, \sigma}\bigl[S_{j,i,i'} \text{ wins on } a_j\bigr], \]
+  where $a_j$ is uniform in $\mathbb{Z}_q$ and $\sigma$ uniform, independent: the right side is the
+  sum of the square Diffie--Hellman advantages of the solvers.
+\end{corollary}
+
+\begin{proof}
+  \leanok
+  $\mathrm{Both}$ is the union of the $\mathrm{Both}_{j,i,i'}$, and each of them, outside
+  $\mathrm{Zero}$, injects by $\Psi_j$ into the pairs $(a_j, \sigma)$ on which $S_{j,i,i'}$ wins
+  (Lemma~\ref{lem:co-sqdh}). The real randomness and the pairs have the same number of elements:
+  $(H_K, J_K)$ corresponds to $(H_K^*, e^*, J^*)$.
+\end{proof}
+
+\begin{remark}[The two points that need care]
+  The case $a_j = 0$ is a genuine leak of the protocol as modelled: with $A_j = 0$ the two masks
+  coincide. It costs $k/q$, which is negligible, but it must appear in the bound. The second point is
+  that the square Diffie--Hellman reduction cannot recognize the key queries, which is why the
+  solvers guess their positions, at a cost of $n_K (n_K - 1)$ solvers per input.
+\end{remark}

@@ -1,0 +1,181 @@
+\chapter{A real oblivious transfer: zero knowledge}
+\label{chap:ot}
+
+In this chapter the ideal OT is replaced by the oblivious transfer of Chou and Orlandi
+\cite[Sect.~2.1]{CO15}. In their notation the sender sends $S = yB$, the receiver with choice $c$
+sends $R = cS + xB$, and the keys are $H_{(S,R)}(yR - jT)$ with $T = yS$; below $A = S$, $a = y$,
+$b = x$ and $g = B$. Their key hash is seeded with $(S, R)$; ours is an arbitrary function, which
+is enough for zero knowledge, since the theorem holds for every key hash.
+Let $\mathbb{G}$ be a group with a generator $g$: every element is $b \cdot g$ for a unique
+$b \in \mathbb{Z}_q$. In this chapter $q$ need not be prime; Chapter~\ref{chap:co-soundness}
+assumes it. For each input $j$ the verifier, as sender, sends $A = a \cdot g$; the prover,
+as receiver with choice bit $w$, sends $B = b \cdot g + wA$; the verifier sends the two labels
+masked with the keys $H_K(a \cdot B)$ and $H_K(a \cdot (B - A))$, and the prover unmasks the label
+of $w$ with $H_K(b \cdot A)$. When the verifier opens its seed it also opens its OT secrets $a$, so
+the prover checks both masked labels, not only its own: a verifier cannot make the prover abort
+depending on $w$.
+
+\section{The oblivious transfer}
+
+\begin{definition}[Chou--Orlandi OT]
+  \label{def:co-ot}
+  \lean{GcZk.OT.dlog, GcZk.OT.dlog_smul, GcZk.OT.smul_dlog, GcZk.OT.rmsg, GcZk.OT.recv,
+    GcZk.OT.mOf}
+  \leanok
+  The receiver's message is $B = b \cdot g + wA$, and it unmasks $e_w - H_K(b \cdot A)$. For the
+  analysis we write $m_c(A, B) = e_c - H_K(\log_g(B - cA) \cdot A)$, the label of the choice $c$
+  unmasked with the key of a receiver whose message is $B$.
+\end{definition}
+
+\begin{lemma}[Receiver privacy]
+  \label{lem:rmsg-bij}
+  \lean{GcZk.OT.rmsg_bijective}
+  \leanok
+  \uses{def:co-ot}
+  For every $A$ and $w$, the map $b \mapsto b \cdot g + wA$ is a bijection. In particular $B$ is
+  uniform whatever $w$ is. This is \cite[Lemma~1]{CO15}.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  A bijection followed by a translation.
+\end{proof}
+
+\begin{lemma}
+  \label{lem:recv-mof}
+  \lean{GcZk.OT.recv_eq_mOf, GcZk.OT.mOf_of_secret}
+  \leanok
+  \uses{def:co-ot}
+  The receiver obtains $m_w(A, B)$, a function of the sender's messages and of $B$ only. If
+  $A = a \cdot g$, then $m_c(A, B) = e_c - H_K(a \cdot (B - cA))$, which the receiver can compute
+  once $a$ is opened.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  $\log_g(B - wA) = b$, and $\log_g(X) \cdot (a \cdot g) = a \cdot X$.
+\end{proof}
+
+\section{Zero knowledge}
+
+\begin{lemma}[Locality of evaluation]
+  \label{lem:inputs-below}
+  \lean{GcZk.OT.InputsBelow, GcZk.OT.evalAux_congr_inp}
+  \leanok
+  \uses{def:eval}
+  If every input node of $C$ reads an input $j < k$, the evaluation depends only on the input
+  wires $j < k$.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Induction on the nodes.
+\end{proof}
+
+\begin{definition}[Verifiers with the real OT]
+  \label{def:ot-ver}
+  \lean{GcZk.OT.OTVer, GcZk.OT.toCom, GcZk.OT.chkOT}
+  \leanok
+  \uses{def:com-games, lem:recv-mof}
+  A malicious verifier makes $q_0$ queries to $G$ and sends the messages $A$; after the receiver
+  messages $B$ it makes $q_1$ queries and sends the material and the masked pairs; the remaining
+  phases are those of Definition~\ref{def:com-games}, and the opening also contains the OT
+  secrets. For fixed $B$ it is a verifier of Chapter~\ref{chap:commitment} whose OT pairs are
+  $(m_0(A, B), m_1(A, B))$. The prover's check verifies $A = a \cdot g$, that the material is the
+  garbling of the opened seed, and that both masked labels of every input unmask, with the sender's
+  keys, to $(L_j, L_j + \Delta)$. It does not use the witness.
+\end{definition}
+
+\begin{lemma}[The check is sound]
+  \label{lem:check-sound-ot}
+  \lean{GcZk.Com.CheckSound, GcZk.Com.verChk, GcZk.Com.checkSound_verified,
+    GcZk.OT.checkSound_ot}
+  \leanok
+  \uses{def:ot-ver, lem:inputs-below, thm:eval-garble}
+  If $C$ reads only the inputs $j < k$ and $C(w) = 1$, then whenever the check passes the honest
+  prover's label is the $1$-label $L_{\mathrm{out}} + \Delta$ of the opened seed.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  By Lemma~\ref{lem:recv-mof} the prover received the active labels of $w$ on the inputs $j < k$;
+  apply Lemma~\ref{lem:inputs-below} and Theorem~\ref{thm:eval-garble}.
+\end{proof}
+
+\begin{theorem}[Zero knowledge with the real OT and the hash commitment]
+  \label{thm:zk-ot}
+  \lean{GcZk.Com.zk_rom_of_check, GcZk.Com.zk_count, GcZk.OT.bof, GcZk.OT.realOT,
+    GcZk.OT.simOT, GcZk.OT.sum_realOT, GcZk.OT.zk_ot}
+  \leanok
+  \uses{lem:rmsg-bij, lem:check-sound-ot, thm:zk-rom}
+  For every malicious verifier and every witness $w$ of a circuit that reads only the inputs
+  $j < k$, the probabilities that the verifier outputs $1$ in the real execution and with the
+  simulator differ by at most
+  \[ \frac{q_0 + q_1 + q_2 + q_3}{|R|} . \]
+  The simulator chooses the receiver messages $B$ uniformly and runs the simulator of
+  Theorem~\ref{thm:zk-rom}.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  The proof of Theorem~\ref{thm:zk-rom} uses only that the prover's check is sound; with
+  Lemma~\ref{lem:check-sound-ot} it applies for each fixed $B$. By Lemma~\ref{lem:rmsg-bij}, summing
+  the real execution over the receiver secrets $b$ is summing over uniform $B$.
+\end{proof}
+
+\begin{remark}
+  Receiver privacy is perfect, and zero knowledge holds for every key hash $H_K$.
+\end{remark}
+
+\section{Sender security: the square Diffie--Hellman reduction}
+
+\begin{lemma}
+  \label{lem:keys-sub}
+  \lean{GcZk.SqDH.Wins, GcZk.SqDH.keys_sub}
+  \leanok
+  \uses{def:co-ot}
+  The two key points of the sender differ by the square Diffie--Hellman value:
+  $a \cdot B - a \cdot (B - a \cdot g) = (a a) \cdot g$. This is the observation behind the proof of
+  \cite[Lemma~2]{CO15}.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Linearity of the scalar multiplication.
+\end{proof}
+
+\begin{theorem}[Learning both labels solves square Diffie--Hellman]
+  \label{thm:sqdh}
+  \lean{GcZk.SqDH.Receiver, GcZk.SqDH.BothKeys, GcZk.SqDH.solver, GcZk.SqDH.solver_wins,
+    GcZk.SqDH.card_both_le, GcZk.SqDH.card_both_le_max}
+  \leanok
+  \uses{lem:keys-sub}
+  Let a receiver make $n$ queries to the key hash, at points $Q_0, \dots, Q_{n-1}$ that, like its
+  message $B$, are functions of $A$ alone: it does not adapt to the answers of the hash or to the
+  masked labels (the general case is Chapter~\ref{chap:co-soundness}). For uniform $a$, the probability that it queries
+  both key points of an input is at most the sum, over the $n^2$ pairs of query positions $(i, j)$,
+  of the probability that the solver $A \mapsto Q_i - Q_j$ computes $(a a) \cdot g$ from
+  $a \cdot g$; hence at most $n^2$ times the best square Diffie--Hellman advantage.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  If $Q_i = a \cdot B$ and $Q_j = a \cdot (B - A)$, Lemma~\ref{lem:keys-sub} gives
+  $Q_i - Q_j = (a a) \cdot g$.
+\end{proof}
+
+\begin{remark}[Square and computational Diffie--Hellman]
+  In a group of odd prime order $q$ the two problems are equivalent; Bao, Deng and Zhu give
+  randomized reductions in both directions \cite[Sect.~2.1]{BDZ03}. The elementary argument below is
+  not formalized here. A computational Diffie--Hellman solver, applied to $(a g, a g)$,
+  gives $a^2 g$. Conversely, from a square solver $S$, $ab \cdot g = 2^{-1} \cdot (S((a+b)g) -
+  S(ag) - S(bg))$, since $(a+b)^2 - a^2 - b^2 = 2ab$.
+\end{remark}
+
+\begin{remark}
+  This is the first of three steps towards soundness with the real OT. The other two are in
+  Chapters~\ref{chap:adaptive} and~\ref{chap:co-soundness}: the authenticity bound of
+  Chapter~\ref{chap:random-oracle} is extended to inputs that the prover chooses adaptively, when
+  it queries the key points after seeing the material, and in the random oracle model a label whose
+  key point is never queried is hidden by a uniform mask.
+\end{remark}

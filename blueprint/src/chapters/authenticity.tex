@@ -1,0 +1,94 @@
+\chapter{Authenticity: where \texorpdfstring{$\Delta$}{Delta} enters the view}
+\label{chap:authenticity}
+
+The evaluator can compute every active label from the material and the active inputs, and the
+inactive label of a wire is the active one plus $\Delta$. Authenticity therefore amounts to the
+impossibility of finding $\Delta$. In this chapter we show that $\Delta$ reaches the evaluator's
+view only through the hashes of the inactive selector labels.
+
+\begin{lemma}
+  \label{lem:auth-win-iff}
+  \lean{GcZk.Auth.activeOut, GcZk.Jko.authWin_iff}
+  \leanok
+  \uses{def:auth-game, thm:eval-garble}
+  The adversary wins the authenticity game if and only if it outputs $A + \Delta$, where $A$ is
+  the active output label that the evaluator computes from the material.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  By Theorem~\ref{thm:eval-garble}, $A = \lab_\Delta(L_{\mathrm{out}}, v)$, and
+  $\lab_\Delta(L_{\mathrm{out}}, 1 - v) = A + \Delta$.
+\end{proof}
+
+\section{The ideal garbler}
+
+\begin{definition}[Ideal garbler]
+  \label{def:ideal}
+  \lean{GcZk.Auth.muxT, GcZk.Auth.idealNode, GcZk.Auth.idealMaterial}
+  \leanok
+  \uses{def:eval}
+  The ideal garbler runs alongside the evaluator. It receives the active input labels, the
+  active labels of the constants, the hash $H$ and a \emph{pad} for each multiplexer, and it
+  never uses $\Delta$. At a multiplexer in position $i$, with active selector label $S$, active
+  candidate labels $Z$, $O$ and candidate values $v_z$, $v_o$, it publishes
+  \[ T_i = H(i, S) + Z + O + \mathrm{pad}_i(S, v_z \oplus v_o) . \]
+\end{definition}
+
+\begin{theorem}[The real material is ideal]
+  \label{thm:real-ideal}
+  \lean{GcZk.Auth.realAc, GcZk.Auth.realPad, GcZk.Auth.idealNode_eq,
+    GcZk.Auth.garble_eq_idealMaterial}
+  \leanok
+  \uses{def:ideal, lem:good-snoc}
+  The material of the real garbling is the material of the ideal garbler with the pads
+  \[ \mathrm{pad}_i(S, c) = H(i, S + \Delta) + c\,\Delta . \]
+  Here $S + \Delta$ is the inactive selector label of the multiplexer.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  Write the active labels as $\lab_\Delta(L, v)$. The two hashes $H(i, L_s)$, $H(i, L_s + \Delta)$
+  are $H(i, S)$ and $H(i, S + \Delta)$ in some order, and
+  $Z + O + (v_z \oplus v_o)\Delta = L_z + L_o$. A case analysis on $v_s, v_z, v_o$ concludes.
+\end{proof}
+
+\begin{corollary}
+  \label{cor:exists-pads}
+  \lean{GcZk.Auth.idealAux_exists_pads, GcZk.Auth.exists_pads}
+  \leanok
+  \uses{thm:real-ideal}
+  For every seed there are pads $K_i \in V$, one per position, such that the ideal garbler with the
+  constant pads $K_i$ produces the real material.
+\end{corollary}
+
+\begin{proof}
+  \leanok
+  The ideal garbler reads the pad of position $i$ only once, at position $i$; take $K_i$ to be the
+  value it reads.
+\end{proof}
+
+\section{The bound in the ideal model}
+
+\begin{theorem}[Authenticity in the ideal model]
+  \label{thm:ideal-bound}
+  \lean{GcZk.Auth.padMaterial, GcZk.Auth.ideal_bound}
+  \leanok
+  \uses{cor:exists-pads, lem:auth-win-iff}
+  Let $V$ be finite. Fix the circuit, the active labels and $H$, and let $\Adv$ be any map from
+  materials to $V$. For any $m$, let the pads of the positions
+  $i < m$ be the entries of $K \in V^m$ and the other pads be $0$. Among the pairs $(\Delta, K)$
+  with $\Delta \neq 0$ and $K \in V^m$, at most $|V|^m$ satisfy $\Adv(\Mat) = A(\Mat) + \Delta$, where $\Mat$ is the material with pads $K$. With
+  $\Delta$ uniform on $V \setminus \{0\}$ and $K$ uniform, the success probability is at most
+  $1/(|V| - 1)$.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  The material does not depend on $\Delta$, so for each $K$ the condition determines $\Delta$.
+\end{proof}
+
+The bound holds for every fixed value of the active labels and of $H$, hence on average over any
+distribution of them independent of $(\Delta, K)$. In the real scheme the pads are hashes at
+inactive points; the next chapter justifies the replacement by uniform pads in the random oracle
+model.

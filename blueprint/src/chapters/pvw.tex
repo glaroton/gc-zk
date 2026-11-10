@@ -1,0 +1,338 @@
+\chapter{A real oblivious transfer: the dual-mode OT of Peikert, Vaikuntanathan and Waters}
+\label{chap:pvw}
+
+In the protocol of \cite{JKO13} the prover's choice bits are fixed by $\mathcal{F}_{\mathrm{COT}}$
+before the garbled circuit is sent, and this is what makes static authenticity enough
+(Chapter~\ref{chap:jko}). Jawurek, Kerschbaum and Orlandi describe how to realize
+$\mathcal{F}_{\mathrm{COT}}$ with the OT of Peikert, Vaikuntanathan and Waters \cite{PVW08}, adding
+an open-all phase in which the sender reveals its coins \cite[Appendix~A]{JKO13}. In this chapter we take
+its DDH instance \cite[Sect.~5.3]{PVW08} in messy mode, where the receiver's choice can be
+extracted from its first message with a trapdoor and the sender's security is statistical
+\cite[Theorem~4.1]{PVW08}. We show that soundness then reduces exactly, with no computational step,
+to the end-to-end bound of Theorem~\ref{thm:e2e}. For zero knowledge, the receiver's security is
+computational in messy mode; we reduce it to the indistinguishability of the two modes of the
+common string, which \cite[Theorem~5.2]{PVW08} derives from DDH.
+
+\section{The dual-mode cryptosystem}
+
+We write the group additively: $\mathbb{G}$ has prime order $q$ and is a $\mathbb{Z}_q$-module.
+
+\begin{definition}[Messy common string, keys, encryption]
+  \label{def:pvw}
+  \lean{GcZk.PVW.Crs, GcZk.PVW.Crs.Messy, GcZk.PVW.keyGen, GcZk.PVW.enc, GcZk.PVW.dec}
+  \leanok
+  A common string is a tuple $(g_0, h_0, g_1, h_1)$ of group elements. It is messy, with trapdoor
+  $(x_0, x_1)$, if $g_0, g_1 \neq 0$, $h_b = x_b \cdot g_b$ and $x_0 \neq x_1$; only the
+  extraction uses the trapdoor. The receiver with choice
+  $\sigma$ and secret $r$ sends $\mathit{pk} = (r \cdot g_\sigma, r \cdot h_\sigma)$. The encryption
+  of $m \in \mathbb{G}$ on branch $b$ with coins $(s, t)$ is
+  \[ (s \cdot g_b + t \cdot h_b,\; s \cdot \mathit{pk}_1 + t \cdot \mathit{pk}_2 + m), \]
+  and $(c_0, c_1)$ decrypts with $r$ to $c_1 - r \cdot c_0$. This is \cite[Sect.~5.3]{PVW08},
+  where encryption is built on the algorithm $\mathrm{Randomize}$ of \cite[Lemma~5.1]{PVW08}.
+\end{definition}
+
+\begin{lemma}[Correctness]
+  \label{lem:pvw-dec}
+  \lean{GcZk.PVW.dec_enc}
+  \leanok
+  \uses{def:pvw}
+  Decryption is correct on the receiver's branch.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  $s \cdot (r \cdot g_\sigma) + t \cdot (r \cdot h_\sigma) = r \cdot (s \cdot g_\sigma + t \cdot h_\sigma)$.
+\end{proof}
+
+\begin{lemma}[Messy branches]
+  \label{lem:pvw-messy}
+  \lean{GcZk.PVW.enc_bijective}
+  \leanok
+  \uses{def:pvw}
+  If $g_b \neq 0$ and $\mathit{pk}_2 \neq x_b \cdot \mathit{pk}_1$, then for every message $m$
+  the encryption on branch $b$ is a bijection from the coins $\mathbb{Z}_q^2$ onto
+  $\mathbb{G}^2$. In particular, with uniform coins the ciphertext is uniform whatever $m$ is. This
+  is the second case of \cite[Lemma~5.1]{PVW08}, in exact form.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Both sides have $q^2$ elements, so it suffices to show injectivity. Encryption is affine in the
+  coins. If the difference $(\delta_s, \delta_t)$ of two coins is mapped to $0$, then
+  $(\delta_s + \delta_t x_b) \cdot g_b = 0$, so $\delta_s = -\delta_t x_b$, and then
+  $\delta_t \cdot (\mathit{pk}_2 - x_b \cdot \mathit{pk}_1) = 0$, so $\delta_t = 0$.
+\end{proof}
+
+\begin{lemma}[Extraction]
+  \label{lem:pvw-ext}
+  \lean{GcZk.PVW.ext, GcZk.PVW.messy_of_ext, GcZk.PVW.enc_zero_key}
+  \leanok
+  \uses{def:pvw}
+  Let $\mathrm{ext}(\mathit{pk})$ be $0$ if $\mathit{pk}_2 = x_0 \cdot \mathit{pk}_1$ and $1$
+  otherwise. If the common string is messy and $\mathit{pk}_1 \neq 0$, the branch
+  $1 - \mathrm{ext}(\mathit{pk})$ satisfies the hypothesis of Lemma~\ref{lem:pvw-messy}. On the
+  other hand, for $\mathit{pk} = (0, 0)$ the second component of every ciphertext is the message.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  If $\mathit{pk}_2 = x_0 \cdot \mathit{pk}_1 = x_1 \cdot \mathit{pk}_1$, then
+  $(x_0 - x_1) \cdot \mathit{pk}_1 = 0$, which is impossible. The second claim is immediate.
+\end{proof}
+
+\begin{remark}
+  $\mathrm{ext}$ is the complement of the algorithm $\mathrm{FindMessy}$ of
+  \cite[Sect.~5.3]{PVW08}, which outputs the messy branch $1 - \mathrm{ext}(\mathit{pk})$. The argument that $\mathit{pk}_2 = x_0 \cdot
+  \mathit{pk}_1$ implies $\mathit{pk}_2 \neq x_1 \cdot \mathit{pk}_1$ needs $\mathit{pk}_1 \neq 0$,
+  and the key $(0, 0)$ (the pair $(1, 1)$ in multiplicative notation) has no messy branch. The
+  version of August 2008 does not check this. The revision of January 2019 does: its sender outputs
+  nothing when $\mathit{pk}_1$ is the identity, its $\mathrm{FindMessy}$ treats that case apart, and
+  its receiver chooses $r \neq 0$ \cite[Sect.~5.3]{PVW08}. We follow the revision on the sender's
+  side: the verifier rejects any key with $\mathit{pk}_1 = 0$. On the receiver's side the honest
+  prover of Definition~\ref{def:pvw-hyb} samples $r$ in all of $\mathbb{Z}_q$, as in
+  \cite[App.~A]{JKO13}, so with probability at most $k/q$ it sends a key that the verifier rejects;
+  no completeness statement is made for this OT. Lemma~\ref{lem:pvw-dec} holds for every $r$.
+\end{remark}
+
+\begin{definition}[Decryption mode]
+  \label{def:pvw-dec}
+  \lean{GcZk.PVW.Crs.Dec, GcZk.PVW.keyGen_dec}
+  \leanok
+  \uses{def:pvw}
+  A common string is in decryption mode if $h_b = x \cdot g_b$ for a common $x$ and
+  $g_1 = y \cdot g_0$ with $y \neq 0$.
+  Then the key of the choice $1$ with secret $r$ is the key of the choice $0$ with secret $y r$
+  (trapdoor key generation, \cite[Sect.~5.3]{PVW08}).
+\end{definition}
+
+\section{Soundness}
+
+\begin{definition}[The protocol with the PVW OT]
+  \label{def:pvw-prover}
+  \lean{GcZk.PVW.Prover, GcZk.PVW.cts, GcZk.PVW.RealAccept}
+  \leanok
+  \uses{def:pvw, thm:e2e}
+  The common string is messy and fixed. The cheating prover sends keys $\mathit{pk}_j$, one for
+  each input; the verifier rejects if some $(\mathit{pk}_j)_1 = 0$. Otherwise it sends, for each
+  input $j$ and each branch $b$, the encryption on branch $b$ of $\iota(L_j + b\Delta)$, where
+  $\iota$ is any map from labels to $\mathbb{G}$, with uniform coins. The rest is the protocol of
+  Theorem~\ref{thm:e2e}, except that after the opening the prover also sees all the coins of the
+  OT, as in the open-all phase of \cite[Appendix~A]{JKO13}.
+\end{definition}
+
+\begin{lemma}[Sampling the messy ciphertext]
+  \label{lem:pvw-coins}
+  \lean{GcZk.PVW.coinsOf, GcZk.PVW.coinsEquiv, GcZk.PVW.sum_coins}
+  \leanok
+  \uses{lem:pvw-messy, lem:pvw-ext, def:pvw-prover}
+  Fix the labels. Sampling the coins of both branches is the same as sampling the ciphertexts of
+  the messy branches and the coins of the other branches: the coins of a messy branch are the
+  preimage of its ciphertext.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Lemma~\ref{lem:pvw-messy}, input by input.
+\end{proof}
+
+\begin{theorem}[Soundness with the PVW OT in messy mode]
+  \label{thm:pvw-sound}
+  \lean{GcZk.PVW.xOf, GcZk.PVW.ctsOf, GcZk.PVW.toE2E, GcZk.PVW.cts_coinsOf,
+    GcZk.PVW.realAccept_iff, GcZk.PVW.prob_accept_le}
+  \leanok
+  \uses{lem:pvw-coins, lem:pvw-dec}
+  For an unsatisfiable circuit and a messy common string, with the seed, the hashes and the coins
+  of the OT uniform, the verifier accepts with probability at most
+  \[ \frac{n_1 + 1}{|V| - 1} + \frac{n_1^2 + n_2 + 1}{|D|} , \]
+  the bound of Theorem~\ref{thm:e2e}.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  Fix the sampled messy ciphertexts and the coins of the other branches. The prover is then a
+  prover of Theorem~\ref{thm:e2e} with OT input $\mathrm{ext}(\mathit{pk}_j)$: before the opening it
+  computes the ciphertext of the extracted branch from the active label, and after the opening it
+  computes the coins of the messy branch from the seed (Lemma~\ref{lem:pvw-coins}). Apply
+  Theorem~\ref{thm:e2e} and average.
+\end{proof}
+
+\begin{remark}
+  The reduction is not efficient: it inverts encryption on the messy branch, which amounts to
+  computing discrete logarithms. This does not matter here, since the bound of
+  Theorem~\ref{thm:e2e} holds for every prover with the given numbers of queries. Lemma~\ref{lem:pvw-dec}
+  is not used in the proof; it is the completeness of the OT.
+\end{remark}
+
+\section{Zero knowledge}
+
+\begin{definition}[Verifiers with the PVW OT]
+  \label{def:pvw-ver}
+  \lean{GcZk.PVW.PVer, GcZk.PVW.keys, GcZk.PVW.toCom, GcZk.PVW.chkP}
+  \leanok
+  \uses{def:pvw, def:com-games}
+  A malicious verifier sees the prover's keys $\mathit{pk}_j = \mathrm{keyGen}(w_j, r_j)$; the rest
+  is as in Definition~\ref{def:com-games}, with the ciphertexts of both branches in its first
+  message and all the coins of the OT in its opening. The prover decrypts the label of its choice
+  and decodes it with a left inverse of $\iota$. Its check after the opening: the material is the
+  garbling of the opened seed, and every ciphertext is the encryption of the label of its branch
+  with the opened coins. It does not use the witness.
+\end{definition}
+
+\begin{lemma}[The check is sound]
+  \label{lem:pvw-check}
+  \lean{GcZk.PVW.checkSound_pvw}
+  \leanok
+  \uses{def:pvw-ver, lem:pvw-dec, lem:inputs-below, thm:eval-garble}
+  If $C$ reads only the inputs $j < k$ and $C(w) = 1$, then whenever the check passes the honest
+  prover's label is the $1$-label of the opened seed.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  The ciphertext of the prover's branch is an encryption under its own key, so it decrypts to the
+  active label (Lemma~\ref{lem:pvw-dec}); apply Lemma~\ref{lem:inputs-below} and
+  Theorem~\ref{thm:eval-garble}.
+\end{proof}
+
+Since the check recomputes every ciphertext from the seed and the coins, the opening cannot be
+equivocated, and no binding argument for the open-all phase \cite[Appendix~A]{JKO13} is needed.
+
+\begin{definition}[Hybrids]
+  \label{def:pvw-hyb}
+  \lean{GcZk.PVW.realP, GcZk.PVW.hybP, GcZk.PVW.pReal, GcZk.PVW.pHyb, GcZk.PVW.sim_toCom}
+  \leanok
+  \uses{def:pvw-ver, thm:zk-rom}
+  For choice bits $x$, the hybrid $\mathrm{Hyb}_x$ sends the keys of $x$ and runs the simulator of
+  Theorem~\ref{thm:zk-rom}. The simulator of the protocol is $\mathrm{Hyb}_0$: it sends the keys of
+  the choice $0$ and does not use the witness. As a function of the common string, the probability
+  $p_x$ that the verifier outputs $1$ in $\mathrm{Hyb}_x$ is computed without the witness (beyond
+  the bits $x$) and without any trapdoor.
+\end{definition}
+
+\begin{theorem}[Zero knowledge for a fixed common string]
+  \label{thm:pvw-zk}
+  \lean{GcZk.PVW.real_hyb, GcZk.PVW.zk_pvw}
+  \leanok
+  \uses{def:pvw-hyb, lem:pvw-check}
+  For every common string, every malicious verifier and every witness of a circuit that reads only
+  the inputs $j < k$,
+  \[ |p_{\mathrm{real}} - p_0| \leq \frac{q_1 + q_2 + q_3}{|R|} + |p_w - p_0| . \]
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  For fixed keys the verifier is a verifier of Chapter~\ref{chap:commitment}, and
+  Lemma~\ref{lem:pvw-check} makes Theorem~\ref{thm:zk-rom} apply: the real execution and
+  $\mathrm{Hyb}_w$ differ by at most $(q_1 + q_2 + q_3)/|R|$. Then use the triangle inequality.
+\end{proof}
+
+\begin{lemma}[Decryption mode]
+  \label{lem:pvw-hyb-dec}
+  \lean{GcZk.PVW.pHyb_dec}
+  \leanok
+  \uses{def:pvw-hyb, def:pvw-dec}
+  In decryption mode $p_x$ does not depend on $x$.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  By Definition~\ref{def:pvw-dec}, the map $r_j \mapsto y r_j$ on the inputs with $x_j = 1$ is a
+  bijection of the secrets that turns the keys of $x$ into the keys of $0$, and the simulator does
+  not use the secrets otherwise.
+\end{proof}
+
+\begin{theorem}[Zero knowledge in messy mode, by switching modes]
+  \label{thm:pvw-zk-modes}
+  \lean{GcZk.PVW.zk_pvw_modes}
+  \leanok
+  \uses{thm:pvw-zk, lem:pvw-hyb-dec}
+  Let the verifier depend on the common string and make at most $Q$ queries. Averaged over a
+  nonempty set $S_m$ of common strings, the real execution and the simulator differ by at most
+  \[ \frac{Q}{|R|} + |\mathbb{E}_{S_m} p_w - \mathbb{E}_{S_d} p_w| +
+     |\mathbb{E}_{S_d} p_0 - \mathbb{E}_{S_m} p_0| \]
+  for every set $S_d$ of decryption-mode strings.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  Average Theorem~\ref{thm:pvw-zk} over $S_m$, and use $\mathbb{E}_{S_d} p_w = \mathbb{E}_{S_d} p_0$
+  (Lemma~\ref{lem:pvw-hyb-dec}).
+\end{proof}
+
+\begin{remark}
+  With $S_m$ and $S_d$ the supports of the messy and the decryption-mode setups, the last two terms
+  are the advantages of the distinguishers $p_w$ and $p_0$ between the two modes. The next section
+  bounds them by DDH advantages.
+\end{remark}
+
+\section{The two modes and DDH}
+
+We follow \cite[Sect.~5.1 and 5.3]{PVW08}, in the 2019 revision, in a group of prime order $q > 2$.
+The messy setup samples $g_0, g_1 \neq 0$ and distinct nonzero $x_0, x_1$; the decryption setup
+samples $g_0 \neq 0$ and nonzero $x, y$, and outputs $(g_0, x g_0, y g_0, x y g_0)$. The DDH
+assumption of \cite[Sect.~5.1]{PVW08} says that for random $g, h \neq 0$ the tuples
+$(g, h, a g, a h)$ with $a$ random and $(g, h, a g, b h)$ with $a \neq b$ random are
+computationally indistinguishable. For a function $F$ of the tuple with values in $[0, 1]$ we write
+$\mathrm{Adv}_{\mathrm{DDH}}(F)$ for the absolute value of the difference of the averages of $F$
+over the tuples of the first kind and over those of the second.
+
+\begin{lemma}[The setups as tuples]
+  \label{lem:pvw-tuples}
+  \lean{GcZk.PVW.mk, GcZk.PVW.parM, GcZk.PVW.parRa, GcZk.PVW.parD, GcZk.PVW.parT,
+    GcZk.PVW.parRe, GcZk.PVW.crsM, GcZk.PVW.tupRa, GcZk.PVW.crsD, GcZk.PVW.tupRe,
+    GcZk.PVW.crsD_dec, GcZk.PVW.lg, GcZk.PVW.sum_messy, GcZk.PVW.sum_dec}
+  \leanok
+  \uses{def:pvw, def:pvw-dec}
+  The messy setup is the distribution of random tuples conditioned on $a, b \neq 0$, and the
+  decryption setup is the distribution of DDH tuples conditioned on $a \neq 0$.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  With $h = x_0 g_0$, $g_1 = a g_0$ and $b = a x_1 / x_0$, the map
+  $(g_0, g_1, x_0, x_1) \mapsto (g_0, h, a, b)$ is a bijection onto the tuples with $g, h \neq 0$
+  and $a \neq b$ nonzero; similarly $(g_0, y, x) \mapsto (g_0, x g_0, y)$. This is the computation
+  in the proof of \cite[Theorem~5.2]{PVW08}, where it is stated as statistical closeness.
+\end{proof}
+
+\begin{theorem}[Indistinguishability of the modes]
+  \label{thm:pvw-modes}
+  \lean{GcZk.PVW.avg, GcZk.PVW.abs_avg_sub_le, GcZk.PVW.ratio_messy, GcZk.PVW.ratio_dec,
+    GcZk.PVW.advDDH, GcZk.PVW.abs_modes_le}
+  \leanok
+  \uses{lem:pvw-tuples}
+  For every function $F$ of the common string with values in $[0, 1]$, the averages of $F$ over
+  the messy and the decryption setups differ by at most the DDH advantage of $F$, read as a
+  function of the tuple, plus $3/q$.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  By Lemma~\ref{lem:pvw-tuples}, conditioning removes a proportion $2/q$ of the random tuples and
+  $1/q$ of the DDH tuples, and the average of a function with values in $[0, 1]$ over a subset
+  moves by at most the proportion removed.
+\end{proof}
+
+\begin{theorem}[Zero knowledge in messy mode under DDH]
+  \label{thm:pvw-zk-ddh}
+  \lean{GcZk.PVW.parM_nonempty, GcZk.PVW.abs_avg_sub_avg_le, GcZk.PVW.pHyb_le_one,
+    GcZk.PVW.zk_pvw_ddh}
+  \leanok
+  \uses{thm:pvw-zk, lem:pvw-hyb-dec, thm:pvw-modes}
+  Let the verifier depend on the common string and make at most $Q$ queries. Averaged over the
+  messy setup, the real execution and the simulator differ by at most
+  \[ \frac{Q}{|R|} + \mathrm{Adv}_{\mathrm{DDH}}(p_w) + \mathrm{Adv}_{\mathrm{DDH}}(p_0) +
+     \frac{6}{q} . \]
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  As in Theorem~\ref{thm:pvw-zk-modes}, with Theorem~\ref{thm:pvw-modes} applied to $p_w$ and
+  $p_0$.
+\end{proof}
+
+\begin{remark}
+  The distinguishers $p_w$ and $p_0$ are efficient when the verifier is: they sample keys and run
+  the verifier with the simulator, and use no trapdoor. Lean has no notion of efficient
+  computation, so this is not checked; under DDH their advantages are negligible.
+\end{remark}

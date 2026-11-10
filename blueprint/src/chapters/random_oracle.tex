@@ -1,0 +1,210 @@
+\chapter{Authenticity in the random oracle model}
+\label{chap:random-oracle}
+
+We work in the random oracle model \cite{BR93}. The hash is now a uniformly random function $H \colon \{0, \dots, n - 1\} \times V \to V$, where
+$n$ is the number of nodes, and $\Delta$ is uniform on $V \setminus \{0\}$. The adversary sees
+the material, makes $q$ adaptive queries to $H$, and outputs a label. The active labels of the
+inputs and of the constants are first fixed parameters; Theorem~\ref{thm:garble-rom} at the end of
+the chapter removes this restriction and bounds the real garbling with uniform zero-labels.
+
+\section{The trace of the garbler}
+
+\begin{definition}[Trace]
+  \label{def:trace}
+  \lean{GcZk.RO.idealWiresAux, GcZk.RO.nodeMux, GcZk.RO.muxAt}
+  \leanok
+  \uses{def:ideal}
+  The trace records, for each position $i$ that holds a multiplexer, its active selector label
+  $S_i$ and the XOR $c_i$ of its candidate values. The garbler reads $H$ at $(i, S_i)$ and the pad
+  at $(i, S_i, c_i)$. In the real scheme the \emph{inactive point} of position $i$ is
+  $(i, S_i + \Delta)$.
+\end{definition}
+
+\begin{lemma}[Congruence]
+  \label{lem:walk-congr}
+  \lean{GcZk.RO.muxAt_lt, GcZk.RO.evalAux_ideal, GcZk.RO.node_congr, GcZk.RO.walk_congr}
+  \leanok
+  \uses{def:trace}
+  Two runs of the ideal garbler whose hashes and pads agree at the points named by the trace of
+  the first produce the same material, the same wires and the same trace.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Induction on the nodes; a node reads only the hash and the pad of its own position.
+\end{proof}
+
+\section{Adversaries and the two games}
+
+\begin{definition}[Adversary]
+  \label{def:qadv}
+  \lean{GcZk.RO.QAdv, GcZk.RO.answers}
+  \leanok
+  A deterministic adversary chooses each query from the material and the previous answers, and its
+  output from the material and all $q$ answers. A randomized adversary is a family of these
+  indexed by its coins.
+\end{definition}
+
+\begin{lemma}[Identical until bad]
+  \label{lem:answers-congr}
+  \lean{GcZk.RO.answers_congr}
+  \leanok
+  \uses{def:qadv}
+  Two oracles that agree at every query the adversary asks give the same answers.
+\end{lemma}
+
+This is the deterministic core of the fundamental lemma of game playing of Bellare and Rogaway
+\cite[Lemma~2]{BR06}; see also Shoup \cite{Sho04}. In the proofs below it is used through injections
+between sets of randomness rather than through probabilities.
+
+\begin{proof}
+  \leanok
+  Induction on the number of queries.
+\end{proof}
+
+\begin{definition}[Real and simulated games]
+  \label{def:games}
+  \lean{GcZk.RO.extH, GcZk.RO.extK, GcZk.RO.rpad, GcZk.RO.realMat, GcZk.RO.RealWin,
+    GcZk.RO.simMat, GcZk.RO.simQuery, GcZk.RO.SimWin, GcZk.RO.SimBad}
+  \leanok
+  \uses{def:trace, def:qadv, lem:auth-win-iff}
+  In the real game the material uses the pads $H(i, S + \Delta) + c\,\Delta$ and the adversary
+  wins if it outputs $A + \Delta$. In the simulated game the material uses independent pads
+  $K \in V^n$, so nothing the adversary sees depends on $\Delta$; it wins with the same condition,
+  and it hits if one of its queries is an inactive point $(i, S_i + \Delta)$ of the simulated
+  trace.
+\end{definition}
+
+\section{The reduction}
+
+\begin{lemma}[Moving the inactive values into the pads]
+  \label{lem:to-sim}
+  \lean{GcZk.RO.realMux, GcZk.RO.moveInactive, GcZk.RO.toSim, GcZk.RO.toSim_walk,
+    GcZk.RO.moveInactive_injective, GcZk.RO.toSim_injective}
+  \leanok
+  \uses{lem:walk-congr, def:games}
+  Fix $\Delta \neq 0$. Given $(H, J)$ with $J \in V^n$, let $H'$ be $H$ with its value at each
+  inactive point $(i, S_i + \Delta)$ replaced by $J_i$, and let $K_i = H(i, S_i + \Delta) + c_i\Delta$
+  at multiplexers and $K_i = J_i$ elsewhere. Then the simulated game with $(H', K)$ has the same
+  material, wires and trace as the real game with $H$, and the map $(H, J) \mapsto (H', K)$ is
+  injective.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Active and inactive points differ because $\Delta \neq 0$, so $H'$ agrees with $H$ at the active
+  points, and the pads agree by construction; Lemma~\ref{lem:walk-congr} gives the first claim.
+  Both traces coincide, so $H$ is recovered from $H'$ off the inactive points and from $K$ at
+  them, and $J$ from $H'$ at the inactive points and from $K$ elsewhere.
+\end{proof}
+
+\begin{lemma}
+  \label{lem:real-win-to-sim}
+  \lean{GcZk.RO.activeOut_ideal, GcZk.RO.realWin_toSim}
+  \leanok
+  \uses{lem:to-sim, lem:answers-congr}
+  If the adversary wins the real game with $H$, it wins or hits in the simulated game with
+  $(H', K)$.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  If it does not hit, its queries avoid the inactive points, where alone $H$ and $H'$ differ;
+  by Lemma~\ref{lem:answers-congr} it gets the same answers, hence outputs the same label.
+\end{proof}
+
+\begin{lemma}
+  \label{lem:card-sim}
+  \lean{GcZk.RO.card_simWin_or_bad}
+  \leanok
+  \uses{def:games}
+  For fixed $(H', K)$, at most $q + 1$ values of $\Delta$ give a simulated win or a hit.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  A win fixes $\Delta = Z - A$, and the $k$-th query $(i, y)$ hits only for $\Delta = y - S_i$.
+\end{proof}
+
+\begin{theorem}[Authenticity in the random oracle model]
+  \label{thm:rom-bound}
+  \lean{GcZk.RO.rom_bound}
+  \leanok
+  \uses{lem:real-win-to-sim, lem:card-sim}
+  Let $V$ be finite. Summed over $\Delta \neq 0$, the hash functions for which a $q$-query
+  adversary outputs the inactive output label number at most $(q + 1)\,|V|^{n |V|}$. With
+  $\Delta$ uniform on $V \setminus \{0\}$ and $H$ uniform, the success probability is at most
+  \[ \frac{q + 1}{|V| - 1} . \]
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  For each $\Delta$, Lemmas~\ref{lem:to-sim} and \ref{lem:real-win-to-sim} inject the real wins,
+  times $|V|^n$ choices of $J$, into the simulated wins or hits. Summing over $\Delta$ and swapping
+  the sums, Lemma~\ref{lem:card-sim} bounds the total by $(q + 1)$ times the number of pairs
+  $(H', K)$. Divide by $|V|^n$.
+\end{proof}
+
+\section{The real garbling}
+
+\begin{lemma}
+  \label{lem:const-congr}
+  \lean{GcZk.Auth.idealAux_congr_const}
+  \leanok
+  \uses{def:ideal}
+  The ideal garbler reads the active label of a constant only at the bit of that constant.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Induction on the nodes.
+\end{proof}
+
+\begin{lemma}[Reparametrization]
+  \label{lem:reparam}
+  \lean{GcZk.Sec.extF, GcZk.Sec.seedOf, GcZk.Sec.activeIn, GcZk.Sec.shiftC, GcZk.Sec.constLab,
+    GcZk.Sec.inpOf, GcZk.Sec.acOf, GcZk.Sec.gMat, GcZk.Sec.GarbleWin,
+    GcZk.Sec.activeInputs_seedOf, GcZk.Sec.gMat_eq, GcZk.Sec.garbleWin_iff}
+  \leanok
+  \uses{thm:real-ideal, lem:const-congr, def:games}
+  Let the seed consist of $\Delta$, zero-labels $L^{\mathrm{in}}$ of the inputs $j < k$ and
+  zero-labels $L^{\mathrm{c}}$ of the constants, and let $x_j = 0$ for $j \geq k$. Then the
+  material of the real garbling, and the game in which the adversary also receives the active
+  labels of $x$, coincide with the game of Theorem~\ref{thm:rom-bound} with the fixed active labels
+  $L^{\mathrm{in}}_j + x_j\Delta$ and $L^{\mathrm{c}}_i + b_i \Delta$.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Theorem~\ref{thm:real-ideal} and Lemma~\ref{lem:const-congr}.
+\end{proof}
+
+\begin{theorem}[Authenticity of the real garbling]
+  \label{thm:garble-rom}
+  \lean{GcZk.Sec.garble_rom_bound}
+  \leanok
+  \uses{lem:reparam, thm:rom-bound}
+  Let $V$ be finite and let the garbler choose $\Delta \neq 0$, the hash $H$ and the zero-labels
+  of the inputs and of the constants uniformly. Let $x$ be an input fixed in advance, with
+  $x_j = 0$ for $j \geq k$ as in Lemma~\ref{lem:reparam}. An adversary that sees the material and
+  the active labels of $x$, and makes $q$ adaptive queries to $H$, outputs the inactive output label
+  with probability at most $(q + 1)/(|V| - 1)$.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  For fixed $\Delta$, the maps $L^{\mathrm{in}} \mapsto L^{\mathrm{in}} + x\Delta$ and
+  $L^{\mathrm{c}} \mapsto L^{\mathrm{c}} + b\Delta$ are bijections. By Lemma~\ref{lem:reparam}
+  the sum over $\Delta$ and the zero-labels becomes a sum over the active labels, outside, of the
+  sums of Theorem~\ref{thm:rom-bound}, inside.
+\end{proof}
+
+\begin{remark}
+  The bound of Theorem~\ref{thm:rom-bound} does not use characteristic $2$: it holds for labels in
+  any finite abelian group. Theorem~\ref{thm:garble-rom} does use it, through
+  Theorem~\ref{thm:real-ideal}. With $128$-bit labels the authenticity advantage of an adversary
+  making $q$ hash queries is at most $(q + 1)/(2^{128} - 1)$. Theorem~\ref{thm:sound} suggests the
+  same bound for the soundness error of the protocol in the hybrid model; the formal statement,
+  with the hash commitment and a prover with a bounded number of queries, is
+  Theorem~\ref{thm:e2e}.
+\end{remark}

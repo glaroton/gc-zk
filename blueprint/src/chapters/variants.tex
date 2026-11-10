@@ -1,0 +1,214 @@
+\chapter{Message order and the security it gives}
+\label{chap:variants}
+
+What can be proved about the protocol of \cite{JKO13} depends less on the garbling scheme than on
+the order of the messages: when the prover's witness bits become fixed, compared with the moment
+it sees the garbled circuit, and when the verifier opens its garbling, compared with the moment
+the prover discloses its output label. The literature fixes these choices in different places, often
+only in a figure or a footnote. This chapter collects them, says which kind of security each
+choice allows, and points to the statements of this library that cover it. The chapter is
+expository and is not itself formalized. It contains no new statement; every claim about the
+library refers to a theorem proved in a later chapter, and a phrase such as ``soundness needs
+adaptive authenticity'' describes what the proofs here use, not a proved necessity.
+
+\section{The protocol in order}
+
+In the protocol of Jawurek, Kerschbaum and Orlandi \cite[Sect.~1.1, Fig.~1]{JKO13} the messages
+are, in order:
+\begin{enumerate}
+  \item the prover runs the oblivious transfers as receiver, one per bit of its witness $w$; the
+  verifier, as sender, inputs the two labels of each input wire;
+  \item the verifier sends the garbled circuit (with a two-round OT, together with its second
+  message);
+  \item the prover evaluates and \emph{commits} to the output label it obtained;
+  \item the verifier \emph{opens} its garbling: the seed, and all its inputs to the oblivious
+  transfers (``open-all'');
+  \item the prover checks that the opened garbling is a garbling of the agreed circuit and agrees
+  with the labels it received, and only then \emph{reveals} its committed label;
+  \item the verifier accepts if the label is the output label for the value $1$.
+\end{enumerate}
+Three choices determine the security: the position of step~2 with respect to the moment the
+witness bits are fixed in step~1; whether step~4 exists and comes after step~3; and how the
+commitment and the oblivious transfer are realized.
+
+\section{When the witness bits are fixed: static or adaptive authenticity}
+
+\emph{Witness fixed before the garbled circuit is seen.} If the receiver's message in the OT
+determines its choice bits, and the garbled circuit is sent only afterwards, the prover's input
+does not depend on the garbling. Soundness then needs only the static authenticity of the garbling:
+the input is chosen first, and the adversary must forge the other output label. This is the order of
+\cite{JKO13}, who note that the garbled circuit may travel with the second message of a two-round
+OT \cite[Sect.~1.1]{JKO13}, and that sending it before the oblivious transfers would require a
+garbling secure against adaptive attacks \cite[Sect.~3, footnote~7]{JKO13}. In this library: soundness reduces exactly to
+the authenticity game (Theorem~\ref{thm:sound}), bounded by $(q+1)/(|V|-1)$ in the random oracle
+model (Theorems~\ref{thm:rom-bound} and~\ref{thm:garble-rom}). The PVW OT in messy mode is of this
+kind: the receiver's key determines its choice, which a trapdoor extracts (Lemma~\ref{lem:pvw-ext},
+Theorem~\ref{thm:pvw-sound}).
+
+\emph{Witness fixed after the garbled circuit is seen.} If the garbled circuit is sent before the
+oblivious transfers, or if the OT lets the receiver postpone its choice, the prover may choose its
+witness bits as a function of the garbled circuit. Soundness then needs \emph{adaptive}
+authenticity, in which the adversary sees the garbled circuit and requests its input labels one at a
+time \cite[Sect.~4, Fig.~6]{BHR12}. The Chou--Orlandi OT is of this kind: the receiver's message does
+not fix its choice, and a receiver can delay the decryption until after it has seen the garbled
+circuit (\cite[Sect.~3]{BPRS17}, \cite[Sect.~1.1]{CO15}). In this library: adaptive authenticity
+for the garbling formalized here, with bound $(q+1)/(|V|-1) + q/|V|$ for $q$ actions
+(Theorem~\ref{thm:adaptive}), and soundness with the Chou--Orlandi OT, by reduction to square
+Diffie--Hellman (Theorem~\ref{thm:co-sound}).
+
+\section{When the garbling is opened: honest or malicious verifier}
+
+\emph{No opening.} If the prover sends its output label directly and the verifier never opens the
+garbling, the protocol is zero knowledge only against an honest verifier \cite[Sect.~3]{JKO13}: a
+malicious verifier can garble a circuit other than the agreed one, or mount a selective-failure
+attack in the input phase \cite[Sect.~1]{JKO13}. In this library: honest-verifier zero knowledge
+(Theorem~\ref{thm:hvzk}), and an explicit malicious verifier that learns a witness bit from the OT
+pairs alone (Proposition~\ref{prop:no-check-leaks}).
+
+\emph{Commit, open, check, reveal.} With steps~3 to~5 in this order the protocol is zero knowledge
+against a malicious verifier, with a single garbled circuit. The opening is possible because in zero
+knowledge the verifier has no secret input, unlike in general two-party computation
+\cite[Sect.~1]{JKO13}. The order matters: the prover must commit to its label before the opening,
+check the opening, and reveal the label only afterwards. The OT must allow this opening, so that the
+prover can check that the labels it received are those of the opened garbling
+\cite[Sect.~1.1]{JKO13}. In this library: perfect zero knowledge in the hybrid model
+(Theorem~\ref{thm:zk}).
+
+\emph{The garbling cannot be opened.} When the garbler has inputs or keys that must stay secret, the
+garbling cannot be opened at the end, and a malicious garbler is handled by cut-and-choose: several
+garbled circuits, some opened and some evaluated. If one good evaluated circuit suffices, choosing
+each circuit with an independent fair coin gives error $2^{-N}$ \cite{Lin13}. In this library:
+Theorems~\ref{thm:cc-fixed}, \ref{thm:cc-lindell} and~\ref{thm:caught-or-correct}.
+
+\section{How the commitment and the oblivious transfer are realized}
+
+\emph{Ideal functionalities.} With ideal OT and ideal commitment, zero knowledge is perfect and
+soundness is exactly the authenticity game (Theorems~\ref{thm:zk} and~\ref{thm:sound}).
+
+\emph{Hash commitment in the random oracle model.} Zero knowledge becomes statistical, with error
+at most $(q_1+q_2+q_3)/|R|$ for a verifier making $q_1+q_2+q_3$ oracle queries; the simulator
+\emph{programs} the oracle (Theorem~\ref{thm:zk-rom}). Soundness goes through an extractor that
+reads the prover's queries, at an extra cost $(n_1^2+n_2+1)/|D|$ (Theorems~\ref{thm:binding}
+and~\ref{thm:e2e}).
+
+\emph{PVW OT with a common string.} In messy mode the receiver's choice is extractable, and
+soundness keeps the bound of the hybrid model (Theorem~\ref{thm:pvw-sound}). Zero knowledge is
+computational: it is reduced to DDH by two explicit distinguishers between the modes
+(Theorems~\ref{thm:pvw-zk-modes} and~\ref{thm:pvw-zk-ddh}). The sender must reject the receiver key
+$(0, 0)$ (Lemma~\ref{lem:pvw-ext}).
+
+\emph{Chou--Orlandi OT in the random oracle model, without common string.} Receiver privacy is
+perfect and zero knowledge holds with the real OT and the hash commitment
+(Theorem~\ref{thm:zk-ot}). Soundness needs adaptive authenticity, and costs $k/q$ for a secret
+$a_j = 0$ plus the advantages of explicit square Diffie--Hellman solvers
+(Theorem~\ref{thm:co-sound}). Chou and Orlandi withdraw the claim of UC security of their protocol
+\cite[Sect.~1.1]{CO15}.
+
+\section{When parties are corrupted}
+\label{sec:corruptions}
+
+Everything formalized in this library assumes \emph{static} corruptions: the adversary decides at
+the start which party it controls. In the framework of universal composability (UC) party
+corruption is modelled by conventions on top of the basic model of execution
+\cite[Sect.~7.1]{Can20}. The formulation given there captures \emph{adaptive} corruptions: the
+adversary corrupts parties as the computation proceeds, based on what it has seen, and receives the
+entire local state of a corrupted party. Static corruptions, where the corrupted parties are fixed
+before the computation starts, are a weaker threat model, and the setting where erasures are not
+trusted corresponds to protocols that write each data cell at most once
+\cite[Sect.~7.1.1]{Can20}. Against adaptive corruptions a simulator must produce the transcript
+without the witness and, when the prover is corrupted later, \emph{explain} it: produce internal
+randomness consistent with the actual witness \cite[Sect.~1.2]{GKPS18}.
+
+\emph{Why it matters with two parties.} We add a remark of our own. In a single proof between two
+parties the verifier has no secret input, and a corrupted prover hands over its witness anyway.
+Adaptive security matters most when the proof is a component of a larger protocol, with many
+sessions or many parties, in which devices may be compromised at different times: the security
+proof of the larger protocol, through the composition theorem \cite[Theorem~22]{Can20}, then relies
+on every component being simulatable under late corruption. Ganesh, Kondi, Patra and Sarkar
+motivate adaptive security by adversaries that use their resources gradually, and by applications
+that use the protocol of \cite{JKO13} as a component \cite[Sect.~1.3]{GKPS18}.
+
+\emph{What has to be explained, and when.} In the protocol of \cite{JKO13} the verifier has no
+input, so its state never needs to be faked, and once the prover holds its output label nothing it
+does depends on the witness \cite[Sect.~3.2]{GKPS18}; in this library the revealed label is the
+simulator's output (Theorem~\ref{thm:zk}). What must be explained therefore depends on the moment
+the prover is corrupted. The table is our reading of the protocol; \cite{GKPS18} prove the case of
+an ideal commitment, stated after it.
+\begin{center}
+\begin{tabular}{|p{0.3\textwidth}|p{0.3\textwidth}|p{0.3\textwidth}|}
+  \hline
+  \textbf{Prover corrupted} & \textbf{To be explained} & \textbf{Property used} \\
+  \hline
+  before the oblivious transfers & nothing & none \\
+  \hline
+  after the oblivious transfers, before the commitment & its OT messages, for the actual witness &
+  receiver-equivocal OT \\
+  \hline
+  after the commitment, before the opening & its OT messages and its commitment & also an equivocal
+  commitment \\
+  \hline
+  after the label is revealed & its OT messages; the commitment is already opened &
+  receiver-equivocal OT; the label does not depend on the witness \\
+  \hline
+\end{tabular}
+\end{center}
+A receiver-equivocal OT is one whose receiver message can be produced without the choice bit and
+later opened to either bit \cite[Sect.~3, Definition~3.1]{GKPS18}; the PVW OT in decryption mode is
+one, under DDH \cite[Sect.~3.3, Theorem~3.2]{GKPS18}. With an ideal commitment there is nothing
+to explain. A hash commitment in the \emph{programmable} random oracle model can be equivocated by
+setting the oracle at the committed point after the fact, a technique recalled in
+\cite[Sect.~1.2]{GKPS18}. With a receiver-equivocal OT and an ideal commitment, the
+protocol of \cite{JKO13} is secure against adaptive corruptions \cite[Sect.~3]{GKPS18}; after
+the execution, the only work is to equivocate the prover's view of the OT
+\cite[Sect.~3.2]{GKPS18}.
+
+\emph{The other choices.} The order of the messages interacts with the corruption time. For the
+Chou--Orlandi OT we note the following, which follows from the form of the messages: the receiver
+message $B = b \cdot g + wA$, with $A = a \cdot g$, is also $(b + (2w - 1) a) \cdot g + (1 - w) A$, so
+explaining it for the other choice bit requires the sender's secret $a$. The simulator knows $a$ when
+the verifier is honest, and otherwise learns it only at the open-all step, so a corruption of the
+prover before the opening is the delicate case. If the garbler has an input of its own, as in general
+two-party computation, the garbled circuit itself must be equivocated, which requires much heavier
+tools \cite[Sect.~3.2]{GKPS18}. Without erasures there is more to explain, and adaptively secure
+oblivious transfer is harder to build \cite{BPRS17}.
+
+\emph{In this library.} None of this is formalized: neither the UC framework, nor adaptive
+corruptions. The ingredient already proved is that the revealed label does not depend on the
+witness (Theorem~\ref{thm:zk}). A somewhat restricted variant of the UC framework has been
+mechanized in EasyCrypt by Canetti, Stoughton and Varia, with a worked example \cite{CSV19}. The
+README of the public core of CatCrypt lists machinery for universal composability in Lean, and says
+that the universal-composability theory itself is in separate distributions \cite{CCcore}.
+
+\section{Summary}
+
+\begin{center}
+\begin{tabular}{|p{0.27\textwidth}|p{0.3\textwidth}|p{0.33\textwidth}|}
+  \hline
+  \textbf{Choice} & \textbf{Security that can be expected} & \textbf{In this library} \\
+  \hline
+  Witness fixed, then garbled circuit & Soundness from static authenticity & Theorems~\ref{thm:sound}, \ref{thm:garble-rom}, \ref{thm:e2e}, \ref{thm:pvw-sound} \\
+  \hline
+  Garbled circuit first, or OT with late choice & Soundness needs adaptive authenticity & Theorems~\ref{thm:adaptive}, \ref{thm:co-sound} \\
+  \hline
+  No opening & Honest-verifier zero knowledge only & Theorem~\ref{thm:hvzk}, Proposition~\ref{prop:no-check-leaks} \\
+  \hline
+  Commit, open, check, reveal & Zero knowledge against a malicious verifier, one circuit & Theorems~\ref{thm:zk}, \ref{thm:zk-rom}, \ref{thm:zk-ot}, \ref{thm:pvw-zk-ddh} \\
+  \hline
+  Garbling cannot be opened & Cut-and-choose, error $2^{-N}$ & Theorems~\ref{thm:cc-lindell}, \ref{thm:caught-or-correct} \\
+  \hline
+  Ideal OT and commitment & Perfect zero knowledge & Theorem~\ref{thm:zk} \\
+  \hline
+  Hash commitment (random oracle) & Statistical zero knowledge, programmable oracle & Theorem~\ref{thm:zk-rom} \\
+  \hline
+  PVW OT, messy mode & Computational zero knowledge (DDH) & Theorem~\ref{thm:pvw-zk-ddh} \\
+  \hline
+  Chou--Orlandi OT & Soundness by reduction to square Diffie--Hellman & Theorem~\ref{thm:co-sound} \\
+  \hline
+  Adaptive corruptions & A receiver-equivocal OT with an ideal commitment suffices \cite{GKPS18} & Not formalized
+  (Section~\ref{sec:corruptions}) \\
+  \hline
+\end{tabular}
+\end{center}
+
+Security against adaptive corruptions, a different axis, is discussed in
+Section~\ref{sec:corruptions}.

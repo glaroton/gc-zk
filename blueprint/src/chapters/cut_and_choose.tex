@@ -1,0 +1,132 @@
+\chapter{Cut-and-choose against a malicious garbler}
+\label{chap:cut-and-choose}
+
+When the garbling cannot be opened, for instance because it contains a secret of the garbler, a
+malicious garbler is handled by cut-and-choose: the garbler sends $N$
+circuits, the evaluator opens some of them and evaluates the others. Classical analyses take a
+majority vote among the evaluated circuits. Lindell \cite{Lin13} observed that if \emph{one good
+evaluated circuit suffices}, choosing each circuit independently with a fair coin gives error
+$2^{-N}$. The first section contains
+the combinatorial core; the second connects it with the garbling of Chapter~\ref{chap:garbling}.
+
+\begin{definition}[Cheating]
+  \label{def:cheats}
+  \lean{GcZk.CC.Cheats}
+  \leanok
+  Let $B \subseteq \{0, \dots, N - 1\}$ be the set of bad circuits and $E$ the set of evaluated
+  circuits. The garbler cheats if no opened circuit is bad (it is not caught) and no evaluated
+  circuit is good (there is no correct output).
+\end{definition}
+
+\begin{lemma}
+  \label{lem:cheats-iff}
+  \lean{GcZk.CC.cheats_iff}
+  \leanok
+  \uses{def:cheats}
+  The garbler cheats if and only if $E = B$.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  The first condition says $B \subseteq E$, the second $E \subseteq B$.
+\end{proof}
+
+\begin{theorem}[A fixed number of evaluated circuits]
+  \label{thm:cc-fixed}
+  \lean{GcZk.CC.card_cheats_fixed, GcZk.CC.card_cheats_fixed_eq, GcZk.CC.card_powersetCard,
+    GcZk.CC.prob_cheats_fixed_le}
+  \leanok
+  \uses{lem:cheats-iff}
+  If $E$ is uniform among the subsets of size $t \le N$, the garbler cheats with probability at
+  most $1/\binom{N}{t}$, with equality when $|B| = t$.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  By Lemma~\ref{lem:cheats-iff} at most one $t$-subset lets the garbler cheat, and exactly one if
+  $|B| = t$.
+\end{proof}
+
+\begin{theorem}[Independent fair coins]
+  \label{thm:cc-lindell}
+  \lean{GcZk.CC.card_cheats_lindell, GcZk.CC.card_cheats_lindell_eq,
+    GcZk.CC.card_powerset_univ, GcZk.CC.prob_cheats_lindell}
+  \leanok
+  \uses{lem:cheats-iff}
+  If each circuit is evaluated or opened with an independent fair coin, every garbler cheats with
+  probability exactly $2^{-N}$.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  $E$ is uniform among the $2^N$ subsets, and exactly one of them is $B$.
+\end{proof}
+
+\begin{proposition}
+  \label{prop:choose-le}
+  \lean{GcZk.CC.choose_le_two_pow}
+  \leanok
+  $\binom{N}{t} \le 2^N$. Independent coins are never worse than a fixed number of evaluated
+  circuits.
+\end{proposition}
+
+\begin{remark}
+  The gap is small. For $N = 40$ the best fixed $t = 20$ gives $2^{-37.0}$ against $2^{-40}$, and
+  for $N = 96$ it gives $2^{-92.4}$ against $2^{-96}$. With independent coins the evaluation set
+  may be empty. Here that event is counted inside the bound $2^{-N}$; Lindell excludes it (the set
+  of check circuits must not be all of them), so his error is $1/(2^{s} - 1)$, which he rounds to
+  $2^{-s}$ \cite[Theorem~4.1 and its footnote~3]{Lin13}. The argument that cheating
+  requires every bad circuit to be evaluated and every good one to be checked is in
+  \cite[Sect.~2]{Lin13}.
+\end{remark}
+
+\section{Copies of a garbling}
+
+The two hypotheses of Definition~\ref{def:cheats}, that an opened bad circuit is caught and that
+one good evaluated circuit suffices, follow from the garbling of Chapter~\ref{chap:garbling}.
+
+\begin{definition}[Copies]
+  \label{def:copies}
+  \lean{GcZk.CCG.Copy, GcZk.CCG.Good, GcZk.CCG.output, GcZk.CCG.badSet}
+  \leanok
+  \uses{def:view}
+  A copy consists of a claimed seed, the material and the pair of labels offered for each input.
+  It is good when it passes the check of Definition~\ref{def:view}: its material is the garbling
+  of $C$ with its seed and its pairs are $(L_j, L_j + \Delta)$. Opening a copy reveals the seed,
+  so goodness is checked by garbling again.
+\end{definition}
+
+\begin{lemma}[One good evaluated copy suffices]
+  \label{lem:output-good}
+  \lean{GcZk.CCG.output_of_good}
+  \leanok
+  \uses{def:copies, thm:eval-garble}
+  A good copy evaluated on $x$ outputs the plaintext value $C(x)$ and the label of that value.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Theorem~\ref{thm:eval-garble}.
+\end{proof}
+
+\begin{theorem}[Caught or correct]
+  \label{thm:caught-or-correct}
+  \lean{GcZk.CCG.caught_or_correct, GcZk.CCG.Fails, GcZk.CCG.fails_iff,
+    GcZk.CCG.prob_fail_fixed_le, GcZk.CCG.prob_fail_lindell}
+  \leanok
+  \uses{lem:output-good, lem:cheats-iff, thm:cc-fixed, thm:cc-lindell}
+  For every evaluation set $E$, an opened copy is bad, or an evaluated copy outputs $C(x)$ with
+  its label, or $E$ is exactly the set of bad copies. The last event has probability at most
+  $1/\binom{N}{t}$ for a uniform $t$-subset, and exactly $2^{-N}$ with independent fair coins.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  Lemma~\ref{lem:cheats-iff} with $B$ the set of bad copies, Lemma~\ref{lem:output-good}, and
+  Theorems~\ref{thm:cc-fixed} and \ref{thm:cc-lindell}.
+\end{proof}
+
+\begin{remark}
+  The evaluator receives its input labels through the offered pairs, as in an oblivious transfer.
+  The consistency of the garbler's own inputs across the evaluated copies is not modeled.
+\end{remark}

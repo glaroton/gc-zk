@@ -1,0 +1,429 @@
+\chapter{Adaptive authenticity}
+\label{chap:adaptive}
+
+\textbf{Status.} No originality is claimed for this chapter. We expect a bound of this kind to be
+known to specialists, but we have not found a published statement of it (see below). Everything in it is
+formalized: the reduction to the bad event (Section~\ref{sec:adaptive-lean}) and the bound on
+the bad event (Section~\ref{sec:adaptive-bad}).
+
+\textbf{Where the problem comes from.} In the protocol of \cite{JKO13} the problem does not
+arise: the OT is the functionality $\mathcal{F}_{\mathrm{COT}}$, which fixes the prover's choice bits
+before the garbled circuit is sent (\cite[Fig.~3 and Fig.~6]{JKO13}), and the authenticity needed
+is static \cite[Definition~2]{JKO13}. It arises only when $\mathcal{F}_{\mathrm{COT}}$ is replaced by
+an OT from which the receiver's choice cannot be extracted when its message is sent, as with the
+Chou--Orlandi protocol of Chapter~\ref{chap:ot}, whose receiver message $B$ does not fix the
+choice. Chou and Orlandi note this themselves in the revised version of their paper
+\cite[Sect.~1.1]{CO15}: following Byali, Patra, Ravi and Sarkar \cite[Sect.~3]{BPRS17} and Doerner, Kondi,
+Lee and shelat \cite[App.~A]{DKLs18}, a receiver can delay the decryption, so
+a simulator cannot extract its choice before the end of the protocol, which matters precisely when
+the OT is combined with garbled circuits. They withdraw the claim of UC security and suggest, as a
+remedy, a receiver message that proves timely decryption. This is a different issue from the one raised by Genç, Iovino and Rial \cite{GIR}, who
+point out a flaw in the UC security proof of \cite{CO15} for a corrupted \emph{sender}; a claim of
+theirs about a corrupted receiver, made in an earlier version, was withdrawn \cite[Sect.~1]{GIR}. An OT that realizes $\mathcal{F}_{\mathrm{COT}}$ avoids
+it; Chapter~\ref{chap:pvw} does this with the OT of \cite{PVW08}.
+
+With the Chou--Orlandi OT the receiver's message $B$ does not commit to a choice: the prover
+receives both masked labels of every input together with the material, and it decides which key
+point of $H_K$ to query, that is, which label to unmask, after seeing the material. Soundness with
+the real OT therefore needs authenticity when the input $x$ is chosen \emph{adaptively}, after the
+material and possibly after queries to $H$. The bound of Chapter~\ref{chap:random-oracle} is for a
+fixed $x$, and its proof writes the material through the ideal garbler for that $x$
+(Theorem~\ref{thm:real-ideal}), which is circular when $x$ is chosen later. Bellare, Hoang and
+Rogaway \cite{BHR12} define adaptive authenticity in two forms \cite[Sect.~4, Fig.~6]{BHR12}:
+$\mathrm{aut1}$, where the adversary chooses $x$ after seeing the garbled circuit, and
+$\mathrm{aut2}$, where the bits of $x$ are chosen one at a time and each one is answered with its
+token. The game below is $\mathrm{aut2}$, with access to the random oracle added. Their results
+(Theorems~5 and~6, proved in their full version) are transforms that turn any statically secure
+scheme into an adaptively secure one, by masking the garbled circuit until the input is given;
+they do not say whether privacy-free Free-XOR garbling itself is $\mathrm{aut2}$-secure, which is
+what we would need here. More recently, Barnum, Heath, Kolesnikov and Ostrovsky prove adaptive
+security of unmodified schemes, half-gates among them, in the non-programmable random oracle model
+\cite{BHKO26}; but their notion is adaptive \emph{privacy} \cite[Definition~5]{BHKO26} (and
+obliviousness), not authenticity, and their argument (\cite[Theorem~9]{BHKO26}: query hiding plus
+private rekeying) is of the same kind as the bad event of Section~\ref{sec:adaptive-bad}. Guo, Yang, Wang, Yu and Liu prove
+that unmodified half-gates (the version with privacy, with a hash built from a random permutation) is
+adaptively secure in the non-programmable random permutation model \cite[Sect.~5,
+Theorem~1]{GYWYL}; their notion is again simulation-based privacy \cite[Definition~1]{GYWYL},
+and their method, the H-coefficient technique, bounds the statistical distance between the real and
+the simulated transcripts. We have not found a published
+statement of adaptive authenticity for privacy-free garbling.
+
+\section{The game}
+
+\begin{definition}[Adaptive authenticity game]
+  \label{def:adaptive-game}
+  \lean{GcZk.Adaptive.realO, GcZk.Adaptive.realRun, GcZk.Adaptive.RealWin}
+  \leanok
+  \uses{def:garble, def:eval}
+  The garbler samples $\Delta \in V \setminus \{0\}$, the zero-labels of the inputs and of the
+  constants, and a random oracle $H$, and sends the material $\Mat$. The adversary then interleaves,
+  in any order chosen adaptively:
+  \begin{itemize}
+    \item queries $(i, y)$ to $H$;
+    \item label requests: for an input $j$ not yet requested and a bit $b$ of its choice, it
+    receives the label $L_j + b\Delta$.
+  \end{itemize}
+  It takes $q$ actions in all, queries and requests together. In the formalization a repeated
+  request of an input is answered with the label given the first time, whatever the bit. At the
+  end the requested bits form $x$ (unrequested bits are $0$) and the adversary outputs a
+  label $Z$. It wins if $Z = X_{\mathrm{out}} + \Delta$, where $X_{\mathrm{out}}$ is the active
+  output label for $x$.
+\end{definition}
+
+The evaluator can compute $X_{\mathrm{out}}$ from the material, the requested labels and the
+queries $(i, S_i)$ at the active selector labels, so winning amounts to finding $\Delta$.
+
+\begin{remark}[The model]
+  \label{rem:adaptive-model}
+  The hash is a uniformly random function $H$ and the adversary is computationally unbounded; only
+  its number $q$ of actions is bounded. Authenticity is a game, not a simulation-based notion: no
+  simulator answers the adversary's queries, so the oracle is never programmed. The simulated game
+  of Definition~\ref{def:adaptive-sim} and the maps between randomness of
+  Lemmas~\ref{lem:adaptive-to-sim} and \ref{lem:adaptive-fresh} are devices of the proof, which
+  counts the values of $(\Delta, L, L_c, H)$ for which the adversary wins; the bound is a statement
+  about the real game with $H$ uniform. The distinction between programmable and non-programmable
+  random oracles, which matters for the simulation-based privacy results of \cite{BHKO26} and
+  \cite{GYWYL}, does not arise here. What the bound does assume is the random oracle model itself,
+  with $H$ used only by the garbling scheme; instantiations of $H$ are not covered (see
+  Chapter~\ref{chap:limitations}), and in a protocol that uses a hash elsewhere the garbling must
+  hash in a separate domain (Remark~\ref{rem:adaptive-plan}). Circuits are lists of nodes in evaluation order, and every
+  operand refers to an earlier position; ``position'' and ``largest $i$'' below refer to this order.
+\end{remark}
+
+\section{The simulated game}
+
+\begin{definition}[Simulated game]
+  \label{def:adaptive-sim}
+  \lean{GcZk.Adaptive.simM, GcZk.Adaptive.simO, GcZk.Adaptive.simRun, GcZk.Adaptive.SimWin}
+  \leanok
+  \uses{def:adaptive-game}
+  The simulator sends uniform ciphertexts $T_i$ and uniform active constant labels, answers every
+  label request with a fresh uniform label $R_j$ whatever the bit, and answers queries with a
+  random function $H'$. It never uses $\Delta$; we sample $\Delta$ at the end. All active labels
+  are defined by evaluation: for an input $x$, the active label of an input $j$ is $R_j$, and the
+  evaluator reads $H'$ at the active selector labels.
+\end{definition}
+
+\section{The real game without bad queries}
+\label{sec:adaptive-lean}
+
+The zero-labels $L_s$ of the simulated game of Definition~\ref{def:adaptive-sim} depend on the final
+choice $x$, so two runs with different completions do not share them. This breaks a direct extension
+of the injection of Chapter~\ref{chap:random-oracle}: the map from real to simulated randomness has
+to know $x$ to move the hash values at the inactive points, and on a run with a bad query $x$ cannot
+be read back from the image. We therefore take the bad event in the \emph{real} game, where the two
+points $L_s$, $L_s + \Delta$ of every selector are fixed by the garbler's randomness, and for the
+final $x$.
+
+\begin{definition}[The adaptive game in Lean]
+  \label{def:adaptive-lean}
+  \lean{GcZk.Adaptive.AAdv, GcZk.Adaptive.RealWin, GcZk.Adaptive.RealBad, GcZk.Adaptive.SimWin}
+  \leanok
+  \uses{def:adaptive-game, def:adaptive-sim}
+  The adversary is deterministic (a randomized one is a family indexed by its coins) and takes $q$
+  actions, each a query $(i, y)$ to $H$ or a request $(j, b)$ for an input $j < m$. Only the first
+  request of an input counts: later requests of the same input are answered with the label of the
+  first bit. The real randomness is $(L, L_c, H, J)$: the zero-labels of the inputs and of the
+  constants, the hash and a junk component, which the real game does not use. A query $(i, y)$ is
+  \emph{bad for the final input} if $y = S_i + \Delta$, where $S_i$ is the active label, for the
+  final $x$, of the selector of the multiplexer at position $i$. The simulated game is the one of
+  Definition~\ref{def:adaptive-sim}, with randomness $(R, A, H', T)$: requested labels, active
+  constant labels, hash and ciphertexts.
+\end{definition}
+
+Section~\ref{sec:adaptive-bad} bounds the probability of a query bad for the final input.
+
+\begin{lemma}[Identical until bad]
+  \label{lem:adaptive-to-sim}
+  \lean{GcZk.Adaptive.toAdSim, GcZk.Adaptive.simM_toAdSim, GcZk.Adaptive.simRun_toAdSim,
+    GcZk.Adaptive.simWin_toAdSim}
+  \leanok
+  \uses{def:adaptive-lean, lem:to-sim}
+  For $\Delta \neq 0$, map $(L, L_c, H, J)$ to $(R, A, H', T)$, where $R_j = L_j + x_j \Delta$ for
+  the final $x$, $A$ are the active constant labels, $H'$ is $H$ with its values at the inactive
+  points of the final $x$ replaced by $J$ (Lemma~\ref{lem:to-sim}), and $T$ are the real
+  ciphertexts. The simulated material of the image is the real material. Without a bad query, the
+  simulated game on the image runs exactly as the real game, and a real win is a simulated win.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Requests are answered with $R_j$ in both games, since the first requested bit is the final one.
+  Queries are answered by $H$ and $H'$, which differ only at the inactive points. The active output
+  label is the same with $H$ and with $H'$, because the evaluator reads the hash only at active
+  points.
+\end{proof}
+
+\begin{lemma}[Injectivity]
+  \label{lem:adaptive-inj}
+  \lean{GcZk.Adaptive.toAdSim_injOn, GcZk.Adaptive.idealAux_pad_inj}
+  \leanok
+  \uses{lem:adaptive-to-sim}
+  For $\Delta \neq 0$ the map of Lemma~\ref{lem:adaptive-to-sim} is injective on the real
+  randomness without a bad query.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  The image determines the run of the simulated game, which is the real run, hence the final $x$.
+  Then $R$ and $A$ give $L$ and $L_c$. The material determines the pads of
+  Lemma~\ref{lem:to-sim} at the multiplexers, and $T$ gives them elsewhere; with $H'$, injectivity
+  of the map of Lemma~\ref{lem:to-sim} gives $(H, J)$.
+\end{proof}
+
+\begin{theorem}[Winning without a bad query]
+  \label{thm:adaptive-not-bad}
+  \lean{GcZk.Adaptive.win_not_bad_bound, GcZk.Adaptive.win_le}
+  \leanok
+  \uses{lem:adaptive-inj}
+  Let $V$ be finite. With $\Delta$ uniform on $V \setminus \{0\}$ and the zero-labels and the hash
+  uniform, the adversary wins without a bad query with probability at most $1/(|V| - 1)$. Hence it
+  wins with probability at most $1/(|V| - 1)$ plus the probability of a bad query.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  For each $\Delta \neq 0$, Lemmas~\ref{lem:adaptive-to-sim} and \ref{lem:adaptive-inj} inject the
+  real wins without a bad query into the simulated wins. The simulated game does not use $\Delta$,
+  so each simulated randomness wins for at most one $\Delta$. Sum over $\Delta$ and swap the sums.
+\end{proof}
+
+With Theorem~\ref{thm:adaptive-not-bad}, Theorem~\ref{thm:adaptive} reduces to
+Theorem~\ref{thm:adaptive-bad-bound}, the bound on bad queries.
+
+\section{Bad queries}
+\label{sec:adaptive-bad}
+
+We bound the probability of a query that is bad for the final input. The difficulty is that this
+event is not decided at the time of the query: whether a point is inactive depends on bits the
+adversary requests later. We replace it by an event that is decided at the time of the query, and
+for that we need to know which selector labels the adversary can know at that time. A selector
+whose \emph{value} is fixed by the bits requested so far does not qualify: the XOR of two wires
+that always carry opposite values has a fixed value, but its label may involve hash values the
+adversary has never seen. The right notion is a combinatorial ``linear part'' of each label.
+
+Fix the adversary and a step $k$. Let $R_k$ be the set of inputs requested before step $k$, and
+$x^{(k)}$ the input formed by the bits requested before step $k$, with $0$ elsewhere. For a wire
+$w$, $v_w(x)$ is its value on the input $x$ and $X^{(k)}_w$ its active label for $x^{(k)}$; in the
+real game $X^{(k)}_w = Z_w + v_w(x^{(k)}) \Delta$, where $Z_w$ is the zero-label. For a
+multiplexer at position $i$, $s_i$ is its selector and $c_i$ the candidate selected by
+$v_{s_i}(x^{(k)})$.
+
+\begin{definition}[Linear part]
+  \label{def:lin}
+  \lean{GcZk.Lin.pv, GcZk.Lin.pl, GcZk.Lin.plain_getD}
+  \leanok
+  \uses{def:adaptive-game}
+  The \emph{atoms} are the symbols $a_j$, for the inputs $j$, and $b_i$, for the multiplexers $i$.
+  The linear part $\ell^{(k)}_w \in \F^{\mathrm{atoms}}$ of a wire is defined by induction:
+  \begin{itemize}
+    \item an input $j$: $a_j$ if $j \notin R_k$, and $0$ if $j \in R_k$; a constant: $0$;
+    \item an XOR $w = a \oplus b$: $\ell^{(k)}_a + \ell^{(k)}_b$;
+    \item a multiplexer $i$: $\ell^{(k)}_{c_i}$ if $\ell^{(k)}_{s_i} = 0$, and
+    $b_i + \ell^{(k)}_{c_i}$ otherwise.
+  \end{itemize}
+  A wire is \emph{known} at step $k$ if $\ell^{(k)}_w = 0$, and \emph{unknown} otherwise. The
+  linear part depends only on the circuit, $R_k$ and $x^{(k)}$, not on the randomness.
+\end{definition}
+
+The atom $b_i$ stands for the hash value $H(i, X^{(k)}_{s_i})$ read by the evaluator at an unknown
+selector, and $a_j$ for the label of an input not yet requested. Lemma~\ref{lem:adaptive-shift}
+makes this precise.
+
+\begin{lemma}[Known wires are determined]
+  \label{lem:lin-det}
+  \lean{GcZk.Lin.pv_add, GcZk.Lin.pv_eq_of_known}
+  \leanok
+  \uses{def:lin}
+  Let $x'$ agree with $x^{(k)}$ on $R_k$. There is $\varphi : \mathrm{atoms} \to \F$ with
+  $v_w(x') + v_w(x^{(k)}) = \sum_\beta \ell^{(k)}_w(\beta) \varphi(\beta)$ for every wire $w$. In
+  particular a known wire has the same value, and in the real game the same active label, on $x'$
+  and on $x^{(k)}$.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Put $\varphi(a_j) = x'_j + x^{(k)}_j$ and $\varphi(b_i) = v_i(x') + v_i(x^{(k)}) + v_{c_i}(x') +
+  v_{c_i}(x^{(k)})$, and argue by induction on the position. Inputs, constants and XORs are
+  immediate. At a multiplexer with an unknown selector the claim is the definition of
+  $\varphi(b_i)$ together with the induction hypothesis for $c_i$. At a multiplexer with a known
+  selector the selector has the same value on $x'$ and on $x^{(k)}$ by induction, so both select
+  $c_i$, and $v_i = v_{c_i}$ on both inputs. The active label is $Z_w + v_w \Delta$.
+\end{proof}
+
+\begin{lemma}[Monotonicity]
+  \label{lem:lin-mono}
+  \lean{GcZk.Lin.pl_mono, GcZk.Lin.known_mono}
+  \leanok
+  \uses{def:lin, lem:lin-det}
+  For $j \le k$ there is a linear map $\psi$ with $\ell^{(k)}_w = \psi(\ell^{(j)}_w)$ for every
+  wire $w$. In particular a wire known at step $j$ is known at step $k$.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Put $\psi(a_t) = a_t$ if $t \notin R_k$ and $0$ otherwise, and $\psi(b_i) = \ell^{(k)}_i +
+  \ell^{(k)}_{c^{(j)}_i}$, where $c^{(j)}_i$ is the candidate selected at step $j$. By induction on
+  the position: XORs are linear; at a multiplexer with a selector unknown at step $j$,
+  $\psi(\ell^{(j)}_i) = \psi(b_i) + \psi(\ell^{(j)}_{c^{(j)}_i}) = \ell^{(k)}_i +
+  \ell^{(k)}_{c^{(j)}_i} + \ell^{(k)}_{c^{(j)}_i} = \ell^{(k)}_i$. At a multiplexer with a selector known at step $j$, the selector is known at step
+  $k$ (its linear part is $\psi(0) = 0$), and by Lemma~\ref{lem:lin-det}, since $x^{(k)}$ agrees with
+  $x^{(j)}$ on $R_j$, it has the same value at both steps; so the same candidate $c$ is selected,
+  and $\ell^{(k)}_i = \ell^{(k)}_c = \psi(\ell^{(j)}_c) = \psi(\ell^{(j)}_i)$.
+\end{proof}
+
+\begin{definition}[Bad step]
+  \label{def:adaptive-bad}
+  \lean{GcZk.Adaptive.BadStep}
+  \leanok
+  \uses{def:lin}
+  Step $k$ of the real game is \emph{bad} if its action is a query $(i, y)$ at a multiplexer $i$
+  with selector $s$, and either $s$ is known at step $k$ and $y = X^{(k)}_s + \Delta$, or $s$ is
+  unknown at step $k$ and $y \in \{Z_s, Z_s + \Delta\} = \{X^{(k)}_s, X^{(k)}_s + \Delta\}$.
+\end{definition}
+
+\begin{lemma}[First bad step]
+  \label{lem:adaptive-first-bad}
+  \lean{GcZk.Adaptive.exists_badStep, GcZk.Adaptive.not_realBad_of_first,
+    GcZk.Adaptive.realMux_some}
+  \leanok
+  \uses{def:adaptive-bad, def:adaptive-lean, lem:lin-det}
+  If some query is bad for the final input, some step is bad. If $k$ is the first bad step, the game
+  truncated to its first $k$ steps has no query bad for its final input, which is $x^{(k)}$.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Let the query at step $k$ be bad for the final input $x$: $y = X_s + \Delta$ for the active label
+  $X_s$ of $s$ on $x$. Since $x$ agrees with $x^{(k)}$ on $R_k$, if $s$ is known at step $k$ then
+  $X_s = X^{(k)}_s$ by Lemma~\ref{lem:lin-det}; otherwise $y$ is one of $Z_s, Z_s + \Delta$ anyway.
+  For the second claim, let $j < k$ and let the query at step $j$ be $(i, y)$ with selector $s$.
+  If $s$ is known at step $j$, then $X^{(k)}_s = X^{(j)}_s$ by Lemma~\ref{lem:lin-det}, and $y \ne
+  X^{(j)}_s + \Delta$ because step $j$ is not bad. If $s$ is unknown at step $j$, $y$ is neither of
+  its two points.
+\end{proof}
+
+\begin{lemma}[The image of a first bad step]
+  \label{lem:adaptive-bad-image}
+  \lean{GcZk.Adaptive.simBadAt_toAdSim, GcZk.Adaptive.simX_toAdSim, GcZk.Adaptive.SimBadAt}
+  \leanok
+  \uses{lem:adaptive-first-bad, lem:adaptive-to-sim, lem:adaptive-inj, lem:lin-mono}
+  Let $\Delta \neq 0$ and $k < q$. The map of Lemma~\ref{lem:adaptive-to-sim} for the game truncated
+  to $k$ steps is injective on the real randomness whose first bad step is $k$. On its image the
+  simulated game, for the same $k$ steps and the same action at step $k$, has: the action at step
+  $k$ is a query $(i, y)$ at a multiplexer, and, with $X$ the simulated active label of its selector
+  $s_i$ for $x^{(k)}$, either $y = X + \Delta$, or $s_i$ is unknown at step $k$, $y = X$, and no
+  query before step $k$ is at a point $(i', X_{s_{i'}})$ of a multiplexer $i'$ whose selector is
+  unknown at step $k$.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Injectivity is Lemma~\ref{lem:adaptive-inj} for the truncated game, which has no bad query by
+  Lemma~\ref{lem:adaptive-first-bad}. The simulated run on the image coincides with the real run for
+  $k$ steps (Lemma~\ref{lem:adaptive-to-sim}), so the action at step $k$ is the same, and the active
+  labels for $x^{(k)}$ are the same in both games, because the evaluator reads the hash only at
+  active points. A selector unknown at step $k$ is unknown at every earlier step
+  (Lemma~\ref{lem:lin-mono}), so a query at one of its points before step $k$ would be a bad step.
+\end{proof}
+
+\begin{lemma}[Shifting an atom]
+  \label{lem:adaptive-shift}
+  \lean{GcZk.Adaptive.plab_shift, GcZk.Adaptive.plab_shiftH, GcZk.Adaptive.plab_shiftR,
+    GcZk.Adaptive.simEval_getD, GcZk.Lin.pl_support}
+  \leanok
+  \uses{def:lin, def:adaptive-sim}
+  In the simulated game at step $k$, give the atoms the values $\alpha(a_j) = R_j$ and $\alpha(b_i) =
+  H'(i, X_{s_i})$, the labels being those for $x^{(k)}$. Let $s$ be an unknown wire, and let
+  $\beta^*$ be $b_{i^*}$ for the largest $i^*$ with $b_{i^*}$ in $\ell^{(k)}_s$ if there is one,
+  and some $a_j$ in $\ell^{(k)}_s$ otherwise. Add $v$ to the randomness at $\beta^*$: to $R_j$, or to
+  $H'$ at the point $(i^*, X_{s_{i^*}})$. Then the labels of the wires before position $i^*$ do not
+  change, and $X_s$ changes by exactly $v$.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Write $\delta$ for the change. By induction on the position, $\delta X_w = \sum_\beta
+  \ell^{(k)}_w(\beta)\, \delta\alpha(\beta)$. XORs are linear. At a multiplexer with an unknown
+  selector, $X_i = \alpha(b_i) + X_{c_i}$, plus $T_i$ if the selector is $1$. At a multiplexer with a
+  known selector, $X_i = H'(i, X_{s_i}) + X_{c_i}$ (plus $T_i$); the selector label does not change
+  (its linear part is $0$), and neither does $H'$ at gate $i$, since $i \neq i^*$. The atoms change
+  as follows: $\delta\alpha(\beta^*) = v$; the other $a_j$ do not change; $\delta\alpha(b_i) = 0$ for
+  $i < i^*$, because the labels before $i^*$ do not change (by the same induction, the linear parts
+  of those wires involve only such atoms). Since $\ell^{(k)}_s$ contains no $b_i$ with $i > i^*$,
+  $\delta X_s = v$.
+\end{proof}
+
+\begin{lemma}[Fresh labels]
+  \label{lem:adaptive-fresh}
+  \lean{GcZk.Adaptive.card_freshHit_le, GcZk.Adaptive.shiftAt_injOn,
+    GcZk.Adaptive.simRun_shiftAt}
+  \leanok
+  \uses{lem:adaptive-shift}
+  For each $k$, the simulated randomness for which the action at step $k$ is a query $(i, y)$ with
+  $s_i$ unknown at step $k$, $y = X_{s_i}$, and no earlier query at the active label of a selector
+  unknown at step $k$ (the condition of Lemma~\ref{lem:adaptive-bad-image}; in particular none at
+  the point of $\beta^*$ for $s = s_i$, when $\beta^*$ is some $b_{i^*}$), is at most a fraction
+  $1/|V|$ of all of it.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Map a pair $(\sigma, v)$, with $\sigma$ in this set and $v \in V$, to $\sigma$ shifted by $v$ at
+  $\beta^*$. The shift does not change the view up to step $k$: $R_j$ is not requested before step
+  $k$, and $H'$ changes at a point not queried before step $k$. So the image determines the run up
+  to step $k$, hence $x^{(k)}$, the linear parts, $\beta^*$ and its point (the labels before $i^*$
+  do not change). Then $v = X_{s_i} - y$ on the image, by Lemma~\ref{lem:adaptive-shift}, and
+  $\sigma$ is recovered. So the map is injective, and the set has at most $|\mathrm{Sim}| / |V|$
+  elements.
+\end{proof}
+
+\begin{theorem}[Bad queries]
+  \label{thm:adaptive-bad-bound}
+  \lean{GcZk.Adaptive.card_bad_le, GcZk.Adaptive.card_bad_le_first, GcZk.Adaptive.card_first_le,
+    GcZk.Adaptive.sum_hitDelta_le}
+  \leanok
+  \uses{lem:adaptive-bad-image, lem:adaptive-fresh}
+  With $\Delta$ uniform on $V \setminus \{0\}$ and the rest uniform, a query bad for the final input
+  occurs with probability at most $q \bigl( 1/(|V| - 1) + 1/|V| \bigr)$, for an adversary taking
+  $q$ actions.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  By Lemma~\ref{lem:adaptive-first-bad} it suffices to bound, for each $k < q$, the randomness whose
+  first bad step is $k$. Fix $\Delta \neq 0$ and inject it into the simulated randomness by
+  Lemma~\ref{lem:adaptive-bad-image}. The images with $y = X + \Delta$ occur, for each simulated
+  randomness, for at most one $\Delta$, since the simulated game does not use $\Delta$. The others
+  lie, for every $\Delta$, in the set of Lemma~\ref{lem:adaptive-fresh}. Summing over $\Delta$, the
+  count is at most $|\mathrm{Sim}| + (|V| - 1)|\mathrm{Sim}|/|V|$; divide by $(|V| - 1)
+  |\mathrm{Sim}|$ and sum over $k$.
+\end{proof}
+
+\begin{theorem}[Adaptive authenticity]
+  \label{thm:adaptive}
+  \lean{GcZk.Adaptive.adaptive_authenticity, GcZk.Adaptive.card_win_le}
+  \leanok
+  \uses{thm:adaptive-not-bad, thm:adaptive-bad-bound}
+  In the adaptive authenticity game, an adversary taking $q$ actions wins with probability at most
+  \[ \frac{q + 1}{|V| - 1} + \frac{q}{|V|} . \]
+\end{theorem}
+
+For $|V| \geq 2$ this is at most $(2q + 1)/(|V| - 1)$, an elementary inequality that is not part of
+the formal statement.
+
+\begin{proof}
+  \leanok
+  Theorem~\ref{thm:adaptive-not-bad} and Theorem~\ref{thm:adaptive-bad-bound}.
+\end{proof}
+
+\begin{remark}[The Chou--Orlandi OT]
+  \label{rem:adaptive-plan}
+  Theorem~\ref{thm:adaptive} is used in Chapter~\ref{chap:co-soundness}, with
+  Lemma~\ref{lem:keys-sub} (both labels of an input require solving square Diffie--Hellman) and a
+  simulation of the OT layer by label requests, to extend the soundness of
+  Chapter~\ref{chap:commitment} to the Chou--Orlandi OT. The OT derives its keys with a hash as
+  well. Theorem~\ref{thm:adaptive} is for an oracle used only by the garbling, so the two must hash
+  in separate domains (for instance with distinct prefixes), which makes them independent random
+  oracles.
+\end{remark}

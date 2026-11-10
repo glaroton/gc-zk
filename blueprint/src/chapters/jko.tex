@@ -1,0 +1,185 @@
+\chapter{The protocol of Jawurek, Kerschbaum and Orlandi}
+\label{chap:jko}
+
+The prover wants to convince the verifier that it knows $w$ with $C(w) = 1$, where $C$ is a
+circuit with a designated output node. We follow the protocol $\pi_{\mathrm{ZK}}$ of \cite{JKO13}
+(Sect.~4, Theorem~2, and Fig.~6 of the ePrint version), which is stated in the
+$(\mathcal{F}_{\mathrm{COT}}, \mathcal{F}_{\mathrm{COM}})$-hybrid model: $\mathcal{F}_{\mathrm{COT}}$
+is an OT with an open-all phase in which the sender reveals all its inputs (\cite[Fig.~3]{JKO13},
+``OT with sender verifiability''), and $\mathcal{F}_{\mathrm{COM}}$ is an ideal commitment. In
+$\pi_{\mathrm{ZK}}$ the prover sends its choice bits to $\mathcal{F}_{\mathrm{COT}}$ first, and the
+garbled circuit is sent after the transfer. Our model below abstracts the OT and its open-all phase
+by the opened seed:
+\begin{enumerate}
+  \item Through the OT functionality the prover receives, for each input $j$, the label of the
+  bit $w_j$. The verifier garbles $C$ with a seed $\sigma$ and sends the material.
+  \item The prover evaluates and commits to the output label $Z$.
+  \item The verifier opens $\sigma$. The prover garbles again and opens $Z$ only if the material
+  and the OT labels are the ones that $\sigma$ determines.
+  \item The verifier accepts if and only if $Z$ is the $1$-label $L_{\mathrm{out}} + \Delta$ of the
+  output node.
+\end{enumerate}
+
+\section{The model}
+
+\begin{definition}[Messages of the verifier]
+  \label{def:verifier-msg}
+  \lean{GcZk.Jko.VerifierMsg, GcZk.Jko.otReceive, GcZk.Jko.honestMsg}
+  \leanok
+  \uses{def:garble}
+  A possibly malicious verifier sends arbitrary material, an arbitrary pair of labels to the OT
+  functionality for each input, and an arbitrary seed as its opening. A receiver with choice bits
+  $x$ gets the first or second label of each pair. The honest verifier with seed $\sigma$ sends
+  the garbling of $C$, the pairs $(L_j, L_j + \Delta)$, and $\sigma$.
+\end{definition}
+
+\begin{definition}[The prover's check and the view]
+  \label{def:view}
+  \lean{GcZk.Jko.proverLabel, GcZk.Jko.Verified, GcZk.Jko.view, GcZk.Jko.sim, GcZk.Jko.Accepts}
+  \leanok
+  \uses{def:verifier-msg, def:eval}
+  The honest prover evaluates the material on the labels it received. After the opening it checks
+  that the material is the garbling of $C$ with the opened seed and that every OT pair is
+  $(L_j, L_j + \Delta)$. The verifier's view is the opened label if the check passes, and an abort
+  otherwise. The simulator outputs $L_{\mathrm{out}} + \Delta$, computed from the opened seed, if
+  the check passes, and an abort otherwise; it does not use the witness.
+\end{definition}
+
+In the hybrid model the OT functionality gives the verifier nothing, and the commitment
+functionality gives it only the fact that the prover committed. Its view is therefore the opened
+label or an abort, a function of its own messages. A randomized verifier is a family of
+deterministic ones indexed by its coins, so equality of views for every message gives equality
+of view distributions.
+
+\begin{lemma}
+  \label{lem:prover-label}
+  \lean{GcZk.Jko.otReceive_eq_activeInputs, GcZk.Jko.proverLabel_of_verified}
+  \leanok
+  \uses{def:view, thm:eval-garble}
+  If the check passes, the honest prover's label is $\lab_\Delta(L_{\mathrm{out}}, v)$, where $v$
+  is the plaintext output on $w$ and $L_{\mathrm{out}}$, $\Delta$ come from the opened seed.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  OT pairs of the form $(L_j, L_j + \Delta)$ hand out the active inputs; apply
+  Theorem~\ref{thm:eval-garble}.
+\end{proof}
+
+\section{Completeness, zero knowledge, soundness}
+
+\begin{theorem}[Completeness]
+  \label{thm:complete}
+  \lean{GcZk.Jko.complete}
+  \leanok
+  \uses{lem:prover-label}
+  If $C(w) = 1$, the honest prover passes its check and the honest verifier accepts, for every
+  seed.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  The honest messages pass the check by definition, and Lemma~\ref{lem:prover-label} gives
+  $Z = L_{\mathrm{out}} + \Delta$.
+\end{proof}
+
+\begin{theorem}[Perfect zero knowledge against a malicious verifier]
+  \label{thm:zk}
+  \lean{GcZk.Jko.zk, GcZk.Jko.view_witness_indep}
+  \leanok
+  \uses{lem:prover-label}
+  If $C(w) = 1$, then for every message of the verifier its view of the honest prover equals the
+  output of the simulator. In particular the view is the same for any two witnesses.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  If the check fails both abort. If it passes, Lemma~\ref{lem:prover-label} shows that the
+  prover's label is $\lab_\Delta(L_{\mathrm{out}}, 1) = L_{\mathrm{out}} + \Delta$, which is the
+  simulator's output.
+\end{proof}
+
+\begin{remark}
+  The authenticity notion we use is the static one of \cite[Definition~2]{JKO13}, which restricts
+  the authenticity of Bellare, Hoang and Rogaway \cite[Sect.~3.6, game Aut of Fig.~5]{BHR12b}: the input $x$ is
+  fixed before the adversary sees the garbled circuit. This matches $\pi_{\mathrm{ZK}}$, where the
+  prover's choice bits are fixed by $\mathcal{F}_{\mathrm{COT}}$ before the garbled circuit is sent.
+\end{remark}
+
+\begin{definition}[Cheating prover and authenticity game]
+  \label{def:auth-game}
+  \lean{GcZk.Jko.Prover, GcZk.Jko.Prover.label, GcZk.Jko.AuthWin}
+  \leanok
+  \uses{def:eval}
+  A cheating prover chooses its OT bits $x$ and computes the label it commits to from the
+  material and the labels it received. Ideal commitment makes this label independent of the later
+  opening. In the authenticity game an adversary receives the material and the active labels of an
+  input $x$ of its choice, and wins if it outputs the inactive output label
+  $\lab_\Delta(L_{\mathrm{out}}, 1 - v)$, where $v$ is the plaintext output on $x$.
+\end{definition}
+
+\begin{theorem}[Soundness by reduction to authenticity]
+  \label{thm:sound}
+  \lean{GcZk.Jko.sound}
+  \leanok
+  \uses{def:auth-game, def:view}
+  If no input satisfies $C$, then for every seed the honest verifier accepts a cheating prover if
+  and only if the prover wins the authenticity game.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  Since the output is $0$ on every input, the inactive output label is
+  $L_{\mathrm{out}} + \Delta$, the label the verifier accepts.
+\end{proof}
+
+A bound on the authenticity advantage, over random seeds and a random hash and for a prover with a
+bounded number of hash queries, is therefore a bound on the soundness error.
+Chapters~\ref{chap:authenticity} and \ref{chap:random-oracle} provide one. The theorem above is for
+a fixed hash and an arbitrary prover; the formal composition with the bound is
+Theorem~\ref{thm:e2e}, which uses Theorem~\ref{thm:garble-rom} directly.
+
+\section{Without the opening}
+\label{sec:no-opening}
+
+In the warm-up of Jawurek, Kerschbaum and Orlandi \cite[Sect.~3]{JKO13} the verifier never opens
+its garbling: the prover sends the output label it computed, and the verifier compares it with the
+$1$-label. This variant is zero knowledge against an honest verifier only. The two statements below
+make both halves of this precise.
+
+\begin{theorem}[Honest-verifier zero knowledge without opening]
+  \label{thm:hvzk}
+  \lean{GcZk.Jko.hvSim, GcZk.Jko.hvzk}
+  \leanok
+  \uses{def:view, lem:prover-label}
+  If $C(w) = 1$, then against the honest verifier with seed $\sigma$ the label the prover sends is
+  $L_{\mathrm{out}} + \Delta$, computed from $\sigma$. It does not depend on the witness.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  The honest verifier's messages pass the prover's check, so Lemma~\ref{lem:prover-label} applies.
+\end{proof}
+
+\begin{proposition}[Without the prover's check, zero knowledge fails]
+  \label{prop:no-check-leaks}
+  \lean{GcZk.Jko.xorCircuit, GcZk.Jko.leakMsg, GcZk.Jko.no_check_leaks}
+  \leanok
+  \uses{def:view}
+  Let $C$ be the circuit $x_0 \oplus x_1$, and let $a \neq 0$. A verifier that sends the honest
+  material of $C$ but offers the OT pairs $(0, a)$ for input $0$ and $(0, 0)$ for input $1$ receives
+  the label $a$ from a prover with witness $(1, 0)$ and the label $0$ from a prover with witness
+  $(0, 1)$. Both are witnesses, so a prover that sends its label without checking reveals its first
+  witness bit. The prover's check rejects these messages, since the pairs are not of the form
+  $(L_j, L_j + \Delta)$ for a single $\Delta$, so in the full protocol the view is an abort for both
+  witnesses (Theorem~\ref{thm:zk}).
+\end{proposition}
+
+\begin{proof}
+  \leanok
+  The output label is the sum of the two received labels: $a + 0$ for $(1, 0)$, and $0 + 0$ for
+  $(0, 1)$. The check would require $a = 0 + \Delta$ and $0 = 0 + \Delta$.
+\end{proof}
+
+This is a simple attack of a malicious verifier on the input phase; the attacks that the opening
+is meant to prevent are listed in \cite[Sect.~1]{JKO13}.

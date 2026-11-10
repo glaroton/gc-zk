@@ -1,0 +1,132 @@
+name: Lean Action CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read # Read access to repository contents
+  pages: write # Write access to GitHub Pages
+  id-token: write # Write access to ID tokens
+
+# A newer push cancels the run in progress, so that two Pages deployments never overlap.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Only the Lean build and the blueprint declaration check can fail the run. The documentation
+# and Pages steps are allowed to fail (they depend on the runner's disk and on GitHub Pages),
+# so that such failures do not produce failure notifications.
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Free disk space on the runner
+        # The Mathlib cache and the documentation need more disk than the runner image leaves
+        # free; remove preinstalled toolchains that the build does not use.
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL \
+            /usr/local/share/boost /usr/local/.ghcup /usr/share/swift
+          sudo docker image prune --all --force || true
+          df -h / /mnt
+      - uses: actions/checkout@v7
+      - uses: leanprover/lean-action@v1
+      - name: Check axioms of the main theorems
+        run: |
+          lake env lean scripts/Axioms.lean | tee axioms.txt
+          tr -s ' \n' ' ' < axioms.txt \
+            | grep -oE "axioms: \[[^]]*\]|does not depend on any axioms" > found.txt
+          # Every axiom used must be one of the three standard ones (a theorem may use fewer).
+          if grep '^axioms' found.txt | sed -e 's/^axioms: \[//' -e 's/\]$//' | tr ',' '\n' | tr -d ' ' \
+              | grep -vxE "propext|Classical\.choice|Quot\.sound"; then
+            echo "Unexpected axioms (see above)"; exit 1
+          fi
+          test "$(wc -l < found.txt)" -eq "$(grep -c '^#print axioms' scripts/Axioms.lean)"
+      - name: Prepare memory for the documentation build
+        run: |
+          # Swap file of up to 16G, leaving at least 4G free on the disk.
+          avail=$(df --output=avail -BG /mnt | tail -1 | tr -dc '0-9')
+          size=$(( avail > 20 ? 16 : avail - 4 ))
+          if [ "$size" -lt 2 ]; then echo "Not enough disk for swap (${avail}G free)"; exit 1; fi
+          echo "Creating a ${size}G swap file (${avail}G free)"
+          sudo fallocate -l ${size}G /mnt/docswap
+          sudo chmod 600 /mnt/docswap
+          sudo mkswap /mnt/docswap
+          sudo swapon /mnt/docswap
+          # Lake spawns `git` from a process with a large address space; without overcommit
+          # the kernel refuses the fork (ENOMEM) even when memory is free.
+          sudo sysctl -w vm.overcommit_memory=1
+          free -h
+      # The API documentation is built with the script of the doc-gen action, but not with the
+      # action itself: the action always deploys to GitHub Pages, and a second deployment of the
+      # same commit (with the blueprint and the home page) would then be ignored by Pages.
+      - name: Get the doc-gen action
+        uses: actions/checkout@v7
+        with:
+          repository: leanprover-community/docgen-action
+          ref: v1
+          path: .docgen-action
+      - name: Build the API documentation
+        if: github.event_name == 'push'
+        continue-on-error: true
+        run: bash .docgen-action/scripts/build_docs.sh
+        env:
+          # The action's metadata parser reads only lakefile.toml; the package uses lakefile.lean
+          # (for the development-only checkdecls), so its name and docs facet are given here.
+          NAME: gc-zk
+          DOCS_FACETS: GcZk:docs
+          HOMEPAGE: site
+      - name: Build the blueprint
+        id: blueprint
+        continue-on-error: true
+        # The blueprint step of the doc-gen action, with `pip` pinned below 26: its pygraphviz
+        # install uses `--global-option`, which pip 26 removed.
+        uses: xu-cheng/texlive-action@f886de8159e5952a131848a5fa9c3196a2132b5d # v2
+        with:
+          docker_image: ghcr.io/xu-cheng/texlive-full:20250401
+          run: |
+            apk update
+            apk add --update make py3-pip git pkgconfig graphviz graphviz-dev gcc musl-dev
+            git config --global --add safe.directory $GITHUB_WORKSPACE
+            git config --global --add safe.directory `pwd`
+            python3 -m venv env
+            source env/bin/activate
+            pip install --upgrade "pip<26" requests wheel
+            pip install pygraphviz --config-settings="--global-option=build_ext" --config-settings="--global-option=-L/usr/lib/graphviz/" --config-settings="--global-option=-R/usr/lib/graphviz/"
+            pip install leanblueprint
+            leanblueprint pdf
+            leanblueprint web
+      - name: Check the declarations cited in the blueprint
+        if: steps.blueprint.outcome == 'success'
+        # checkdecls is a development dependency, required only with `-Kenv=dev`; `-R` reconfigures.
+        run: lake -R -Kenv=dev exe checkdecls blueprint/lean_decls
+      - name: Add the blueprint to the site
+        continue-on-error: true
+        if: github.event_name == 'push'
+        run: |
+          sudo chown -R runner blueprint
+          cp -r blueprint/web site/blueprint
+          cp blueprint/print/print.pdf site/blueprint.pdf
+      - name: Build the home page from the README
+        continue-on-error: true
+        if: github.event_name == 'push'
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet markdown
+          "$RUNNER_TEMP/venv/bin/python" scripts/homepage.py . ${{ github.repository }} \
+            site/docs/declarations/declaration-data.bmp site/index.html
+      - uses: actions/upload-pages-artifact@v5
+        continue-on-error: true
+        if: github.event_name == 'push'
+        with:
+          path: site/
+          name: site-with-home-page
+      - uses: actions/deploy-pages@v4
+        continue-on-error: true
+        if: github.event_name == 'push'
+        with:
+          artifact_name: site-with-home-page
