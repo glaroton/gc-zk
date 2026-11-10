@@ -99,6 +99,17 @@ dependency that Lake loads only on request:
 lake -R -Kenv=dev exe checkdecls blueprint/lean_decls
 ```
 
+To replay every proof through the Lean kernel once more with `leanchecker`, which ships with Lean,
+check the modules one at a time:
+
+```bash
+bash scripts/leanchecker.sh
+```
+
+Avoid `lake env leanchecker GcZk`: `leanchecker` reads its argument as a prefix and replays all the
+modules `GcZk.*` in parallel, each with its own copy of Mathlib, which needs well over 10 GB of
+memory. One module at a time needs at most about 5 GB.
+
 ## Using gc-zk from another project
 
 Add gc-zk as a Lake dependency, pinned to a release tag, and `import GcZk`. It requires only Mathlib.
