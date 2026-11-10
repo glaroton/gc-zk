@@ -215,7 +215,8 @@ soundness needs adaptive authenticity.
   without the choice bit and explained for either bit by a bijection of its randomness (Ganesh,
   Kondi, Patra and Sarkar, PKC 2018, Definition 3.1). `GcZk.AC.pvw_dec_equivocal`: the PVW
   receiver in decryption mode is receiver equivocal (ibid., Theorem 3.2), and
-  `GcZk.AC.pvw_explain_dec`: the explained secret decrypts the label of the actual choice.
+  `GcZk.AC.pvw_explain_dec`: the explained secret decrypts the label of the actual choice;
+  `GcZk.AC.pvw_messy_not_equivocal`: in messy mode it is not receiver equivocal.
   `GcZk.AC.co_equivocal`:
   so is the Chou–Orlandi receiver, for a party that knows the sender's secret.
   `GcZk.AC.explain_prover`: with a receiver-equivocal OT, the prover's OT messages and the

@@ -6,8 +6,8 @@ Section~\ref{sec:corruptions} describes what a simulator must explain when the p
 during or after the protocol of \cite{JKO13}. This chapter formalizes the protocol-specific facts
 behind that description. Receiver equivocality and its PVW instance are
 \cite[Sect.~3, Definition~3.1 and Theorem~3.2]{GKPS18}, and the explanation of the prover follows
-\cite[Sect.~3.2]{GKPS18}. The other three statements we have not found published as such: the
-Chou--Orlandi equivocation given the sender's secret follows from the form of the messages; the
+\cite[Sect.~3.2]{GKPS18}. The other statements we have not found published as such: that messy mode is not
+receiver equivocal follows from the form of the keys; the Chou--Orlandi equivocation given the sender's secret follows from the form of the messages; the
 equivocation of the hash commitment applies the programming of the random oracle recalled in
 \cite[Sect.~1.2]{GKPS18} to the games of Chapter~\ref{chap:commitment}; and soundness in
 decryption mode combines Theorem~\ref{thm:pvw-sound} with the indistinguishability of the modes
@@ -53,6 +53,25 @@ required to be statistically close to the honest one; here it has exactly the sa
   $\sigma$ with secret $e_\sigma(r)$, so the second claim is the correctness of decryption
   (Lemma~\ref{lem:pvw-dec}).
 \end{proof}
+
+\begin{proposition}[Not in messy mode]
+  \label{prop:pvw-messy-not-re}
+  \lean{GcZk.AC.pvw_messy_not_equivocal}
+  \leanok
+  \uses{def:re-ot, def:pvw}
+  On a messy common string the PVW receiver is not receiver equivocal, for any simulated message
+  and explanations.
+\end{proposition}
+
+\begin{proof}
+  \leanok
+  If $\mathit{keyGen}(0, r_0) = \mathit{keyGen}(1, r_1)$, then $r_0 g_0 = r_1 g_1$ and
+  $r_0 x_0 g_0 = r_1 x_1 g_1$, so $(x_0 - x_1) r_0 g_0 = 0$ and $r_0 = 0$, since $x_0 \neq x_1$
+  and $g_0 \neq 0$. Hence $e_0$ is identically $0$, and it is not a bijection.
+\end{proof}
+
+This is why the instantiation of \cite[Sect.~3.3]{GKPS18} uses decryption mode: in messy mode the
+key determines the branch, which is what makes extraction possible (Lemma~\ref{lem:pvw-ext}).
 
 \begin{proposition}[The Chou--Orlandi receiver, given the sender's secret]
   \label{prop:co-re}

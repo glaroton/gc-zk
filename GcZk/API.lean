@@ -59,7 +59,7 @@ mathematical language; its labels (`thm:zk`, `thm:co-sound`, ...) are stable as 
 ## Ingredients for adaptive corruptions (`GcZk.AC`)
 
 * `GcZk.AC.ReceiverEquivocal`, `GcZk.AC.pvw_dec_equivocal`, `GcZk.AC.pvw_explain_dec`,
-  `GcZk.AC.co_equivocal`: receiver-equivocal OT, and its PVW (decryption mode) and Chou–Orlandi
+  `GcZk.AC.pvw_messy_not_equivocal`, `GcZk.AC.co_equivocal`: receiver-equivocal OT, and its PVW (decryption mode) and Chou–Orlandi
   instances.
 * `GcZk.AC.explainRand`, `GcZk.AC.explain_prover`: explaining the prover's OT messages and view.
 * `GcZk.AC.simC`, `GcZk.AC.equivocate_rom`: equivocating the hash commitment.

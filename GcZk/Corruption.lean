@@ -27,6 +27,8 @@ belongs to a framework such as universal composability.
   [GKPS18, Sect. 3, Definition 3.1].
 * `GcZk.AC.pvw_dec_equivocal`: the PVW receiver in decryption mode is receiver equivocal
   [GKPS18, Sect. 3.3, Theorem 3.2], exactly (the explained randomness is uniform).
+* `GcZk.AC.pvw_messy_not_equivocal`: in messy mode it is not, which is why decryption mode is
+  needed.
 * `GcZk.AC.pvw_explain_dec`: the explained secret decrypts the branch of the actual choice, so the
   explained state is consistent with the labels the prover receives.
 * `GcZk.AC.co_equivocal`: the Chou–Orlandi receiver is receiver equivocal for a party that knows
@@ -90,6 +92,30 @@ theorem pvw_dec_equivocal' (c : Crs Gp) (hc : c.Dec q) :
     ∃ e : Bool → ZMod q → ZMod q, ReceiverEquivocal (keyGen c) (keyGen c false) e := by
   obtain ⟨x, y, hy0, hy, hh⟩ := hc
   exact ⟨_, pvw_dec_equivocal c hy0 hy hh⟩
+
+/-- **In messy mode the PVW receiver is not receiver equivocal.** On a messy common string the
+keys of the two choices meet only at the secret `0`: from `r₀ g₀ = r₁ g₁` and
+`r₀ x₀ g₀ = r₁ x₁ g₁` follows `(x₀ - x₁) r₀ g₀ = 0`, so `r₀ = 0`. Hence no explanation of the
+choice `0` is a bijection. This is why decryption mode is needed for receiver equivocality. -/
+theorem pvw_messy_not_equivocal (c : Crs Gp) {t : Bool → ZMod q} (hc : c.Messy t)
+    (sim : ZMod q → Gp × Gp) (e : Bool → ZMod q → ZMod q) :
+    ¬ ReceiverEquivocal (keyGen c) sim e := by
+  rintro ⟨hb, he⟩
+  have h0 : ∀ r, e false r = 0 := by
+    intro r
+    have k := (he false r).trans (he true r).symm
+    simp only [keyGen, Prod.mk.injEq, hc.h_eq] at k
+    obtain ⟨k1, k2⟩ := k
+    have h : (t false - t true) • (e false r • c.g false) = 0 := by
+      rw [sub_smul, sub_eq_zero]
+      calc t false • (e false r • c.g false) = e false r • t false • c.g false := smul_comm _ _ _
+        _ = e true r • t true • c.g true := k2
+        _ = t true • (e true r • c.g true) := smul_comm _ _ _
+        _ = t true • (e false r • c.g false) := by rw [k1]
+    rcases smul_eq_zero.1 h with h | h
+    · exact absurd (sub_eq_zero.1 h) hc.x_ne
+    · exact (smul_eq_zero.1 h).resolve_right (hc.g_ne false)
+  exact zero_ne_one ((hb false).1 ((h0 0).trans (h0 1).symm))
 
 end PVW
 
@@ -404,7 +430,8 @@ variable (hcard : Fintype.card Gp = q)
 
 include hcard in
 /-- **Soundness in decryption mode.** The PVW OT is receiver equivocal in decryption mode
-(`pvw_dec_equivocal`), where the sender is protected only computationally. A cheating prover
+(`pvw_dec_equivocal`), but not in messy mode (`pvw_messy_not_equivocal`); in decryption mode the
+sender is protected only computationally. A cheating prover
 `Pc c` that sees the common string `c` and makes at most `N₁` and `N₂` oracle queries convinces the
 verifier of an unsatisfiable circuit, on average over the decryption-mode strings, with probability
 at most the messy-mode bound of `GcZk.PVW.prob_accept_le` plus the DDH advantage of the acceptance
