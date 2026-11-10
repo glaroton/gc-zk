@@ -18,8 +18,10 @@ for any statement of the form ``I know $w$ with $C(w) = 1$'' for a Boolean circu
 are reversed: the verifier garbles $C$, the prover evaluates it on its witness, and the garbling
 is opened at the end so that the prover can check that it was honest. Since the prover knows its
 own input, the garbling does not need to hide anything from the evaluator, only to prevent it
-from forging output labels. Frederiksen, Nielsen and Orlandi \cite{FNO15} called such schemes
-\emph{privacy-free} and showed that they are considerably cheaper. With Free XOR \cite{KS08} and
+from forging output labels. Frederiksen, Nielsen and Orlandi called such schemes
+\emph{privacy-free} \cite[Sect.~2.2, Definition~4]{FNO15} and showed that they are considerably
+cheaper; their adaptation of Free XOR garbles each non-XOR gate with two ciphertexts
+\cite[Sect.~1.2]{FNO15}. With Free XOR \cite{KS08} and
 the half-gates of Zahur, Rosulek and Evans, XOR gates cost nothing and AND gates cost one
 ciphertext \cite[Sect.~6]{ZRE15}.
 
