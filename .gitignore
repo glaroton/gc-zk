@@ -9,3 +9,7 @@ blueprint/src/print.out
 blueprint/src/print.pdf
 blueprint/src/print.*
 !blueprint/src/print.tex
+# Local files that are not part of the repository: replies to reviews, and PDFs built for
+# reviewers (the reviewer zip adds blueprint/gc-zk-blueprint.pdf on its own).
+/reviews/
+/blueprint/*.pdf
