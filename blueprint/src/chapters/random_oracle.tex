@@ -131,7 +131,7 @@ between sets of randomness rather than through probabilities.
   \lean{GcZk.RO.rom_bound}
   \leanok
   \uses{lem:real-win-to-sim, lem:card-sim}
-  Let $V$ be finite. Summed over $\Delta \neq 0$, the hash functions for which a $q$-query
+  Let $V$ be finite with $|V| \geq 2$. Summed over $\Delta \neq 0$, the hash functions for which a $q$-query
   adversary outputs the inactive output label number at most $(q + 1)\,|V|^{n |V|}$. With
   $\Delta$ uniform on $V \setminus \{0\}$ and $H$ uniform, the success probability is at most
   \[ \frac{q + 1}{|V| - 1} . \]
@@ -168,7 +168,9 @@ between sets of randomness rather than through probabilities.
   \leanok
   \uses{thm:real-ideal, lem:const-congr, def:games}
   Let the seed consist of $\Delta$, zero-labels $L^{\mathrm{in}}$ of the inputs $j < k$ and
-  zero-labels $L^{\mathrm{c}}$ of the constants, and let $x_j = 0$ for $j \geq k$. Then the
+  zero-labels $L^{\mathrm{c}}$ of the constants; the zero-labels of the inputs $j \geq k$ are $0$.
+  Let $x_j = 0$ for $j \geq k$, so that the active labels of these inputs are $0$ as well (with
+  $x_j = 1$ the active label would be $\Delta$ itself, as for $C = [\mathrm{input}(k)]$). Then the
   material of the real garbling, and the game in which the adversary also receives the active
   labels of $x$, coincide with the game of Theorem~\ref{thm:rom-bound} with the fixed active labels
   $L^{\mathrm{in}}_j + x_j\Delta$ and $L^{\mathrm{c}}_i + b_i \Delta$.
@@ -184,7 +186,7 @@ between sets of randomness rather than through probabilities.
   \lean{GcZk.Sec.garble_rom_bound}
   \leanok
   \uses{lem:reparam, thm:rom-bound}
-  Let $V$ be finite and let the garbler choose $\Delta \neq 0$, the hash $H$ and the zero-labels
+  Let $V$ be finite with $|V| \geq 2$, and let the garbler choose $\Delta \neq 0$, the hash $H$ and the zero-labels
   of the inputs and of the constants uniformly. Let $x$ be an input fixed in advance, with
   $x_j = 0$ for $j \geq k$ as in Lemma~\ref{lem:reparam}. An adversary that sees the material and
   the active labels of $x$, and makes $q$ adaptive queries to $H$, outputs the inactive output label

@@ -12,11 +12,12 @@ before the garbled circuit is sent (\cite[Fig.~3 and Fig.~6]{JKO13}), and the au
 is static \cite[Definition~2]{JKO13}. It arises only when $\mathcal{F}_{\mathrm{COT}}$ is replaced by
 an OT from which the receiver's choice cannot be extracted when its message is sent, as with the
 Chou--Orlandi protocol of Chapter~\ref{chap:ot}, whose receiver message $B$ does not fix the
-choice. Chou and Orlandi note this themselves in the revised version of their paper
-\cite[Sect.~1.1]{CO15}: following Byali, Patra, Ravi and Sarkar \cite[Sect.~3]{BPRS17} and Doerner, Kondi,
-Lee and shelat \cite[App.~A]{DKLs18}, a receiver can delay the decryption, so
-a simulator cannot extract its choice before the end of the protocol, which matters precisely when
-the OT is combined with garbled circuits. They withdraw the claim of UC security and suggest, as a
+choice. As Byali, Patra, Ravi and Sarkar \cite[Sect.~3]{BPRS17} and Doerner, Kondi, Lee and shelat
+\cite[App.~A]{DKLs18} point out, a corrupted receiver can delay the decryption, so a simulator
+cannot extract its choice before the end of the protocol. Chou and Orlandi acknowledge the issue in
+the revised version of their paper \cite[Sect.~1.1]{CO15}, where the attacking party is called the
+sender, and note that it matters, for instance, when the OT is combined with garbled circuits. They
+withdraw the claim of UC security and suggest, as a
 remedy, a receiver message that proves timely decryption. This is a different issue from the one raised by Genç, Iovino and Rial \cite{GIR}, who
 point out a flaw in the UC security proof of \cite{CO15} for a corrupted \emph{sender}; a claim of
 theirs about a corrupted receiver, made in an earlier version, was withdrawn \cite[Sect.~1]{GIR}. An OT that realizes $\mathcal{F}_{\mathrm{COT}}$ avoids
@@ -70,8 +71,10 @@ statement of adaptive authenticity for privacy-free garbling.
   output label for $x$.
 \end{definition}
 
-The evaluator can compute $X_{\mathrm{out}}$ from the material, the requested labels and the
-queries $(i, S_i)$ at the active selector labels, so winning amounts to finding $\Delta$.
+If the adversary has requested every input that the circuit reads, it can compute
+$X_{\mathrm{out}}$ from the material, the requested labels and the queries $(i, S_i)$ at the active
+selector labels, and then winning amounts to finding $\Delta$. In general it must produce
+$X_{\mathrm{out}} + \Delta$, and an unrequested input read by the circuit only makes this harder.
 
 \begin{remark}[The model]
   \label{rem:adaptive-model}
@@ -141,8 +144,9 @@ Section~\ref{sec:adaptive-bad} bounds the probability of a query bad for the fin
   \uses{def:adaptive-lean, lem:to-sim}
   For $\Delta \neq 0$, map $(L, L_c, H, J)$ to $(R, A, H', T)$, where $R_j = L_j + x_j \Delta$ for
   the final $x$, $A$ are the active constant labels, $H'$ is $H$ with its values at the inactive
-  points of the final $x$ replaced by $J$ (Lemma~\ref{lem:to-sim}), and $T$ are the real
-  ciphertexts. The simulated material of the image is the real material. Without a bad query, the
+  points of the final $x$ replaced by $J$ (Lemma~\ref{lem:to-sim}), and $T_i$ is the real
+  ciphertext of node $i$ if it is a multiplexer and the pad $J_i$ of Lemma~\ref{lem:to-sim}
+  otherwise; the injectivity below uses both. The simulated material of the image is the real material. Without a bad query, the
   simulated game on the image runs exactly as the real game, and a real win is a simulated win.
 \end{lemma}
 

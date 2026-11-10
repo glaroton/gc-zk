@@ -48,9 +48,12 @@ view only through the hashes of the inactive selector labels.
 
 \begin{proof}
   \leanok
-  Write the active labels as $\lab_\Delta(L, v)$. The two hashes $H(i, L_s)$, $H(i, L_s + \Delta)$
-  are $H(i, S)$ and $H(i, S + \Delta)$ in some order, and
-  $Z + O + (v_z \oplus v_o)\Delta = L_z + L_o$. A case analysis on $v_s, v_z, v_o$ concludes.
+  By induction on the nodes. If the two materials coincide before node $i$, the evaluation reaches
+  node $i$ with the same wires, and by Lemma~\ref{lem:good-snoc} each wire carries the label
+  $\lab_\Delta(L, v)$ of its zero-label $L$ and its plaintext value $v$. At a multiplexer the two
+  hashes $H(i, L_s)$, $H(i, L_s + \Delta)$ are $H(i, S)$ and $H(i, S + \Delta)$ in some order, and
+  $Z + O + (v_z \oplus v_o)\Delta = L_z + L_o$. A case analysis on $v_s, v_z, v_o$ shows that the
+  entries of node $i$ coincide too.
 \end{proof}
 
 \begin{corollary}
@@ -75,7 +78,7 @@ view only through the hashes of the inactive selector labels.
   \lean{GcZk.Auth.padMaterial, GcZk.Auth.ideal_bound}
   \leanok
   \uses{cor:exists-pads, lem:auth-win-iff}
-  Let $V$ be finite. Fix the circuit, the active labels and $H$, and let $\Adv$ be any map from
+  Let $V$ be finite with $|V| \geq 2$. Fix the circuit, the active labels and $H$, and let $\Adv$ be any map from
   materials to $V$. For any $m$, let the pads of the positions
   $i < m$ be the entries of $K \in V^m$ and the other pads be $0$. Among the pairs $(\Delta, K)$
   with $\Delta \neq 0$ and $K \in V^m$, at most $|V|^m$ satisfy $\Adv(\Mat) = A(\Mat) + \Delta$, where $\Mat$ is the material with pads $K$. With

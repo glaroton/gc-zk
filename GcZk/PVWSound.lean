@@ -12,8 +12,8 @@ The ideal OT of `GcZk.E2E` is replaced by the dual-mode OT of [PVW08] in messy m
 (`GcZk.PVW`). The common string is fixed and messy. A cheating prover sends a key `pk_j` for every
 input `j`; the verifier rejects if some `pk_j` has first component `0`, and otherwise sends, for
 each input and each branch `b`, the encryption of the label `L_j + b Δ` with uniform coins. As in
-the open-all phase of `F_COT` [JKO13, Fig. 3], at the opening the prover sees the seed and also all
-the coins of the OT. The rest is as in `GcZk.E2E`.
+the open-all phase of the realization of `F_COT` with the PVW OT [JKO13, Appendix A], at the
+opening the prover sees the seed and also all the coins of the OT. The rest is as in `GcZk.E2E`.
 
 ## Main result
 

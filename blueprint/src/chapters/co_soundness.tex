@@ -304,8 +304,8 @@ $(i, i')$. The receiver depends on $(i, i')$, because the answers to the queries
   K^1_j = a_j B_j - a_j(B_j - A_j) = a_j A_j = a_j^2 g$ (Lemma~\ref{lem:keys-sub}).
 
   \emph{Injectivity.} Let $\omega \in \mathrm{Both}_{j,i,i'} \setminus \mathrm{Zero}$. From $(a_j, \sigma)$ we read $a$, $\rho$, $e_j = e^*$ and $J_{K,j'}$ for $j'
-  \neq j$. Running the prover with $H_K^*$ gives, by the first part, the real $B$, hence $K^0_j$ and
-  $K^1_j$, which are distinct since $a_j \neq 0$. Then $H_K = H_K^*$ off these two points,
+  \neq j$. Running $S_{j,i,i'}$ with coins $\sigma$ on $A = a_j g$ gives, by the first part, the
+  real run, hence $B$, $K^0_j$ and $K^1_j$, which are distinct since $a_j \neq 0$. Then $H_K = H_K^*$ off these two points,
   $H_K(j, K^0_j) = e^*_0 + L_j$, $H_K(j, K^1_j) = e^*_1 + L_j + \Delta$, and $J_{K,j,c} = H_K^*(j,
   K^c_j)$. So $\omega$ is determined.
 \end{proof}

@@ -49,7 +49,8 @@ and opens. V accepts iff `Z = L_out + Δ`.
 ## Phase 3: authenticity of the concrete scheme (hardest)
 
 The evaluator gets the material and the active input labels, and must output the inactive
-output label. With `Δ` uniform and `H` a random oracle (or correlation-robust), the bound is
+output label. With `Δ` uniform and `H` a random oracle (or correlation-robust; in the end only the
+random oracle model is used), the bound is
 roughly `(q + #gates) / |V|` for `q` oracle queries. Here we decide between Mathlib's `PMF`
 with a hand-made lazy oracle and VCV-io's `OracleComp` with query bounds.
 

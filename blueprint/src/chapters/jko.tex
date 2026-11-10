@@ -100,10 +100,14 @@ of view distributions.
 \end{proof}
 
 \begin{remark}
-  The authenticity notion we use is the static one of \cite[Definition~2]{JKO13}, which restricts
-  the authenticity of Bellare, Hoang and Rogaway \cite[Sect.~3.6, game Aut of Fig.~5]{BHR12b}: the input $x$ is
-  fixed before the adversary sees the garbled circuit. This matches $\pi_{\mathrm{ZK}}$, where the
-  prover's choice bits are fixed by $\mathcal{F}_{\mathrm{COT}}$ before the garbled circuit is sent.
+  The authenticity notion we use is the static one of \cite[Definition~2]{JKO13}, which Jawurek,
+  Kerschbaum and Orlandi describe as the authenticity of Bellare, Hoang and Rogaway
+  \cite[Sect.~3.6, game Aut of Fig.~5]{BHR12b} restricted to their setting: the function has a
+  one-bit output, $f(x) = 0$, and the adversary must produce the label of the output $1$. In both
+  the input $x$ is fixed before the adversary sees the garbled circuit; the adaptive variant, where
+  the input is chosen after, is the subject of Chapter~\ref{chap:adaptive}. This matches
+  $\pi_{\mathrm{ZK}}$, where the prover's choice bits are fixed by $\mathcal{F}_{\mathrm{COT}}$
+  before the garbled circuit is sent.
 \end{remark}
 
 \begin{definition}[Cheating prover and authenticity game]

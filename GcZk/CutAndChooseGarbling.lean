@@ -16,9 +16,9 @@ The evaluator opens some copies and evaluates the others on its input `x`.
 A copy is *good* when its material is the garbling of `C` with its seed and its input pairs are
 `(L, L + Δ)` (`GcZk.Jko.Verified`). Opening a copy reveals its seed, so the evaluator can check
 goodness by garbling again. This is the hypothesis "opening a bad circuit reveals it" of
-`GcZk.CC`, now a definition. "One good evaluated copy suffices" becomes a theorem: by
-`GcZk.eval_garble`, a good evaluated copy outputs the correct value `C(x)` with its correct
-label.
+`GcZk.CC`, now a definition. "A good evaluated copy gives a correct output" becomes a theorem:
+by `GcZk.eval_garble`, a good evaluated copy outputs the correct value `C(x)` with its correct
+label. How the evaluator chooses among the outputs of several evaluated copies is not modeled.
 
 ## Main results
 

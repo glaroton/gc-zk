@@ -140,7 +140,7 @@ We write the group additively: $\mathbb{G}$ has prime order $q$ and is a $\mathb
   \lean{GcZk.PVW.xOf, GcZk.PVW.ctsOf, GcZk.PVW.toE2E, GcZk.PVW.cts_coinsOf,
     GcZk.PVW.realAccept_iff, GcZk.PVW.prob_accept_le}
   \leanok
-  \uses{lem:pvw-coins, lem:pvw-dec}
+  \uses{lem:pvw-coins, lem:pvw-ext, thm:e2e}
   For an unsatisfiable circuit and a messy common string, with the seed, the hashes and the coins
   of the OT uniform, the verifier accepts with probability at most
   \[ \frac{n_1 + 1}{|V| - 1} + \frac{n_1^2 + n_2 + 1}{|D|} , \]
@@ -255,8 +255,12 @@ equivocated, and no binding argument for the open-all phase \cite[Appendix~A]{JK
 
 \begin{proof}
   \leanok
-  Average Theorem~\ref{thm:pvw-zk} over $S_m$, and use $\mathbb{E}_{S_d} p_w = \mathbb{E}_{S_d} p_0$
-  (Lemma~\ref{lem:pvw-hyb-dec}).
+  The first step of the proof of Theorem~\ref{thm:pvw-zk} gives
+  $|p_{\mathrm{real}} - p_w| \leq Q/|R|$ for each common string; averaging over $S_m$,
+  $|\mathbb{E}_{S_m} p_{\mathrm{real}} - \mathbb{E}_{S_m} p_w| \leq Q/|R|$. Then use the triangle
+  inequality through $\mathbb{E}_{S_d} p_w = \mathbb{E}_{S_d} p_0$ (Lemma~\ref{lem:pvw-hyb-dec}).
+  Averaging the bound of Theorem~\ref{thm:pvw-zk} itself would leave the term
+  $\mathbb{E}_{S_m} |p_w - p_0|$, which the two differences of averages do not control.
 \end{proof}
 
 \begin{remark}

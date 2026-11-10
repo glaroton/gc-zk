@@ -51,7 +51,7 @@ witness bits as a function of the garbled circuit. Soundness then needs \emph{ad
 authenticity, in which the adversary sees the garbled circuit and requests its input labels one at a
 time \cite[Sect.~4, Fig.~6]{BHR12}. The Chou--Orlandi OT is of this kind: the receiver's message does
 not fix its choice, and a receiver can delay the decryption until after it has seen the garbled
-circuit (\cite[Sect.~3]{BPRS17}, \cite[Sect.~1.1]{CO15}). In this library: adaptive authenticity
+circuit (\cite[Sect.~3]{BPRS17}, \cite[App.~A]{DKLs18}; see also \cite[Sect.~1.1]{CO15}). In this library: adaptive authenticity
 for the garbling formalized here, with bound $(q+1)/(|V|-1) + q/|V|$ for $q$ actions
 (Theorem~\ref{thm:adaptive}), and soundness with the Chou--Orlandi OT, by reduction to square
 Diffie--Hellman (Theorem~\ref{thm:co-sound}).
@@ -109,8 +109,9 @@ $a_j = 0$ plus the advantages of explicit square Diffie--Hellman solvers
 \section{When parties are corrupted}
 \label{sec:corruptions}
 
-The security theorems of this library, except the ingredients of Chapter~\ref{chap:corruption},
-assume \emph{static} corruptions: the adversary decides at the start which party it controls. In
+The security theorems of this library assume \emph{static} corruptions: the adversary decides at
+the start which party it controls. Chapter~\ref{chap:corruption} proves some ingredients for
+adaptive corruptions, but no security statement against them. In
 the framework of universal composability (UC) party
 corruption is modelled by conventions on top of the basic model of execution
 \cite[Sect.~7.1]{Can20}. The formulation given there captures \emph{adaptive} corruptions: the
@@ -155,9 +156,11 @@ an ideal commitment, stated after it.
   \hline
 \end{tabular}
 \end{center}
-A receiver-equivocal OT is one whose receiver message can be produced without the choice bit and
-later opened to either bit \cite[Sect.~3, Definition~3.1]{GKPS18}; the PVW OT in decryption mode is
-one, under DDH \cite[Sect.~3.3, Theorem~3.2]{GKPS18}. With an ideal commitment there is nothing
+A receiver-equivocal OT is a secure OT whose receiver message can be produced, from the trapdoor of
+the setup, without the choice bit and later opened to either bit
+\cite[Sect.~3, Definition~3.1]{GKPS18}; the PVW OT in decryption mode is one, assuming DDH
+\cite[Sect.~3.3, Theorem~3.2]{GKPS18}. DDH is used for the security of the OT; the equivocation
+itself is exact (Theorem~\ref{thm:pvw-re}). With an ideal commitment there is nothing
 to explain. A hash commitment in the \emph{programmable} random oracle model can be equivocated by
 setting the oracle at the committed point after the fact, a technique recalled in
 \cite[Sect.~1.2]{GKPS18}. With a receiver-equivocal OT and an ideal commitment, the
@@ -177,12 +180,14 @@ oblivious transfer is harder to build \cite{BPRS17}.
 
 \emph{In this library.} Adaptive security itself is not formalized: neither the UC framework, nor
 a model of execution with corruptions. Chapter~\ref{chap:corruption} proves the protocol-specific
-facts behind the table: the PVW OT in decryption mode and the Chou--Orlandi OT, for a party that
-knows the sender's secret, are receiver equivocal (Theorem~\ref{thm:pvw-re},
-Proposition~\ref{prop:co-re}); with a receiver-equivocal OT, the prover's OT messages and its
-view can be explained for any witness (Theorem~\ref{thm:explain-prover}); the hash commitment can
+facts behind the table: the receiver of the PVW OT in decryption mode, with the trapdoor of the
+setup, and the receiver of the Chou--Orlandi OT, with the sender's secret, satisfy the
+equivocation condition on messages and randomness (Theorem~\ref{thm:pvw-re},
+Proposition~\ref{prop:co-re}); under that condition the prover's OT messages, and the verifier's
+view of the prover, can be explained for any witness (Theorem~\ref{thm:explain-prover}); the hash commitment can
 be equivocated by programming the oracle (Theorem~\ref{thm:equivocate-rom}); and soundness holds
-with the PVW OT in decryption mode, up to the DDH advantage (Theorem~\ref{thm:pvw-dec-sound}). A somewhat restricted variant of the UC framework has been
+with the PVW OT in decryption mode, up to the DDH advantage (Theorem~\ref{thm:pvw-dec-sound}).
+These are ingredients only; they are not composed into a simulation. A somewhat restricted variant of the UC framework has been
 mechanized in EasyCrypt by Canetti, Stoughton and Varia, with a worked example \cite{CSV19}. The
 README of the public core of CatCrypt lists machinery for universal composability in Lean, and says
 that the universal-composability theory itself is in separate distributions \cite{CCcore}.
@@ -212,7 +217,7 @@ that the universal-composability theory itself is in separate distributions \cit
   \hline
   Chou--Orlandi OT & Soundness by reduction to square Diffie--Hellman & Theorem~\ref{thm:co-sound} \\
   \hline
-  Adaptive corruptions & A receiver-equivocal OT with an ideal commitment suffices \cite{GKPS18} & The ingredients:
+  Adaptive corruptions & A receiver-equivocal OT with an ideal commitment suffices \cite{GKPS18} & Some ingredients:
   Theorems~\ref{thm:pvw-re}, \ref{thm:explain-prover}, \ref{thm:equivocate-rom}, \ref{thm:pvw-dec-sound}; adaptive
   security itself is not formalized (Section~\ref{sec:corruptions}) \\
   \hline

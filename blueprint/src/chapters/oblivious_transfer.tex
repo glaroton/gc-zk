@@ -167,9 +167,11 @@ depending on $w$.
 \begin{remark}[Square and computational Diffie--Hellman]
   In a group of odd prime order $q$ the two problems are equivalent; Bao, Deng and Zhu give
   randomized reductions in both directions \cite[Sect.~2.1]{BDZ03}. The elementary argument below is
-  not formalized here. A computational Diffie--Hellman solver, applied to $(a g, a g)$,
-  gives $a^2 g$. Conversely, from a square solver $S$, $ab \cdot g = 2^{-1} \cdot (S((a+b)g) -
-  S(ag) - S(bg))$, since $(a+b)^2 - a^2 - b^2 = 2ab$.
+  not formalized here, and it applies as written only to solvers that always succeed. A
+  computational Diffie--Hellman solver, applied to $(a g, a g)$, gives $a^2 g$. Conversely, from a
+  square solver $S$, $ab \cdot g = 2^{-1} \cdot (S((a+b)g) - S(ag) - S(bg))$, since
+  $(a+b)^2 - a^2 - b^2 = 2ab$. For solvers that succeed only with some probability the three calls
+  must be rerandomized, as in \cite[Sect.~2.1]{BDZ03}.
 \end{remark}
 
 \begin{remark}

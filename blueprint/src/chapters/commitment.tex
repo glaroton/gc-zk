@@ -137,13 +137,16 @@ simulator that programs the oracle, and soundness becomes extraction plus a bind
     GcZk.Bind.a₁_update, GcZk.Bind.qry₂_update, GcZk.Bind.opn_update}
   \leanok
   \uses{lem:ans-update}
-  Let $p(G)$ be a point and $f(G)$ a value that do not change when $G$ is reprogrammed at $p(G)$.
-  Then $G(p(G)) = f(G)$ for at most a fraction $1/|D|$ of the oracles.
+  Let $E$ be a set of oracles, and let $p(G)$ be a point and $f(G)$ a value that, for $G \in E$, do
+  not change when $G$ is reprogrammed at $p(G)$. Then $G \in E$ and $G(p(G)) = f(G)$ for at most a
+  fraction $1/|D|$ of the oracles.
 \end{lemma}
 
 \begin{proof}
   \leanok
-  The map $(G, x) \mapsto G[p(G) := x]$ is injective on the oracles with $G(p(G)) = f(G)$.
+  The map $(G, x) \mapsto G[p(G) := x]$ is injective on the pairs with $G \in E$ and
+  $G(p(G)) = f(G)$: the image determines $p(G)$, hence $G$ off $p(G)$, and $G(p(G)) = f(G)$ is
+  determined too.
 \end{proof}
 
 \begin{lemma}
@@ -236,8 +239,8 @@ simulator that programs the oracle, and soundness becomes extraction plus a bind
   \lean{GcZk.E2E.card_accept_le, GcZk.E2E.prob_accept_le}
   \leanok
   \uses{thm:binding, lem:ext-auth, thm:garble-rom}
-  Let the seed of the verifier, the hash $H$ and the commitment oracle $G$ be uniform, and let $C$
-  be unsatisfiable. A cheating prover with $n_1$ steps before the commitment and $n_2$ after it is
+  Let $|V| \geq 2$, let the seed of the verifier, the hash $H$ and the commitment oracle $G$ be
+  uniform, and let $C$ be unsatisfiable. A cheating prover with $n_1$ steps before the commitment and $n_2$ after it is
   accepted with probability at most
   \[ \frac{n_1 + 1}{|V| - 1} + \frac{n_1^2 + n_2 + 1}{|D|} . \]
   In the formalization the hypothesis on $C$ is weaker: $C(x) = 0$ for the input $x$ that the

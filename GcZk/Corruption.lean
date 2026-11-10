@@ -22,25 +22,30 @@ belongs to a framework such as universal composability.
 
 ## Main results
 
-* `GcZk.AC.ReceiverEquivocal`: the receiver's message of an OT can be produced without the choice
-  bit, and its randomness explained for either bit, by bijections of the randomness
-  [GKPS18, Sect. 3, Definition 3.1].
-* `GcZk.AC.pvw_dec_equivocal`: the PVW receiver in decryption mode is receiver equivocal
+* `GcZk.AC.ReceiverEquivocal`: the equivocation condition on the receiver: its message can be
+  produced without the choice bit, and its randomness explained for either bit, by bijections of
+  the randomness. This is the condition on messages and randomness of
+  [GKPS18, Sect. 3, Definition 3.1], in a perfect version; the rest of that definition (a secure OT
+  in the common reference string model, explanations computed from the setup trapdoor) is not
+  formalized.
+* `GcZk.AC.pvw_dec_equivocal`: the PVW receiver in decryption mode satisfies the condition, with
+  an explanation that uses the trapdoor `y`; this is the equivocation step of the proof of
   [GKPS18, Sect. 3.3, Theorem 3.2], exactly (the explained randomness is uniform).
-* `GcZk.AC.pvw_messy_not_equivocal`: in messy mode it is not, which is why decryption mode is
-  needed.
+* `GcZk.AC.pvw_messy_not_equivocal`: in messy mode it does not.
 * `GcZk.AC.pvw_explain_dec`: the explained secret decrypts the branch of the actual choice, so the
   explained state is consistent with the labels the prover receives.
-* `GcZk.AC.co_equivocal`: the Chou–Orlandi receiver is receiver equivocal for a party that knows
-  the sender's secret `a`.
-* `GcZk.AC.explain_prover`: with a receiver-equivocal OT, the prover's OT messages and its revealed
-  view, for any witness and the explained randomness, are the simulated ones.
+* `GcZk.AC.co_equivocal`: the Chou–Orlandi receiver satisfies the condition with an explanation
+  that uses the sender's secret `a`, which is not a setup trapdoor.
+* `GcZk.AC.explain_prover`: if the receiver satisfies the condition, the prover's OT messages and
+  the verifier's view of the prover, for any witness and the explained randomness, are the
+  simulated ones (with ideal delivery of the labels).
 * `GcZk.AC.equivocate_rom`: the hash commitment can be equivocated by programming the oracle: a
   prover corrupted after committing reveals `(Z_w, r)`, and a simulator that committed to a
   uniform value and programs `G(Z_w, r)` at the corruption is off by at most `(q₁ + q₂) / |R|`.
-* `GcZk.AC.prob_accept_dec_le`: soundness with the PVW OT in decryption mode, the mode in which it
-  is receiver equivocal: averaged over decryption-mode strings, the acceptance probability is at
-  most the messy-mode bound plus the DDH advantage of an explicit distinguisher plus `3 / q`.
+* `GcZk.AC.prob_accept_dec_le`: soundness with the PVW OT in decryption mode, the mode in which
+  its receiver satisfies the condition: averaged over decryption-mode strings, the acceptance
+  probability is at most the messy-mode bound plus the DDH advantage of an explicit distinguisher
+  plus `3 / q`.
 
 ## References
 
@@ -54,13 +59,15 @@ belongs to a framework such as universal composability.
 
 namespace GcZk.AC
 
-/-! ### Receiver equivocality -/
+/-! ### The equivocation condition -/
 
-/-- The receiver of an OT, with message `msg σ r` for the choice `σ` and randomness `r`, is
-*receiver equivocal* with simulated message `sim` and explanations `e` if each `e σ` is a bijection
-of the randomness and `msg σ (e σ r) = sim r`. A simulator sends `sim r` for a uniform `r`; told the
-choice `σ` later, it explains its message by the randomness `e σ r`, which is uniform because `e σ`
-is a bijection. -/
+/-- The receiver of an OT, with message `msg σ r` for the choice `σ` and randomness `r`, satisfies
+the *equivocation condition* with simulated message `sim` and explanations `e` if each `e σ` is a
+bijection of the randomness and `msg σ (e σ r) = sim r`. A simulator sends `sim r` for a uniform
+`r`; told the choice `σ` later, it explains its message by the randomness `e σ r`, which is uniform
+because `e σ` is a bijection. This is only the condition on messages and randomness of
+[GKPS18, Definition 3.1]: who can compute `e` (there, a simulator holding the setup trapdoor) and
+the security of the OT are not part of it. -/
 def ReceiverEquivocal {Rr M : Type*} (msg : Bool → Rr → M) (sim : Rr → M) (e : Bool → Rr → Rr) :
     Prop :=
   (∀ σ, Function.Bijective (e σ)) ∧ ∀ σ r, msg σ (e σ r) = sim r
@@ -71,7 +78,8 @@ open PVW
 
 variable {q : ℕ} [Fact q.Prime] {Gp : Type*} [AddCommGroup Gp] [Module (ZMod q) Gp]
 
-/-- **The PVW receiver in decryption mode is receiver equivocal.** If `g₁ = y g₀` with `y ≠ 0` and
+/-- **The PVW receiver in decryption mode satisfies the equivocation condition**, with an
+explanation that uses the trapdoor `y`. If `g₁ = y g₀` with `y ≠ 0` and
 `h_b = x g_b`, the key of the choice `0` with randomness `r` is also the key of the choice `1` with
 randomness `y⁻¹ r`. -/
 theorem pvw_dec_equivocal (c : Crs Gp) {x y : ZMod q} (hy0 : y ≠ 0)
@@ -87,16 +95,17 @@ theorem pvw_dec_equivocal (c : Crs Gp) {x y : ZMod q} (hy0 : y ≠ 0)
     · simp only [↓reduceIte]
       rw [keyGen_dec c hy hh, ← mul_assoc, mul_inv_cancel₀ hy0, one_mul]
 
-/-- The PVW receiver is receiver equivocal on every decryption-mode common string. -/
+/-- The PVW receiver satisfies the equivocation condition on every decryption-mode common string.
+-/
 theorem pvw_dec_equivocal' (c : Crs Gp) (hc : c.Dec q) :
     ∃ e : Bool → ZMod q → ZMod q, ReceiverEquivocal (keyGen c) (keyGen c false) e := by
   obtain ⟨x, y, hy0, hy, hh⟩ := hc
   exact ⟨_, pvw_dec_equivocal c hy0 hy hh⟩
 
-/-- **In messy mode the PVW receiver is not receiver equivocal.** On a messy common string the
-keys of the two choices meet only at the secret `0`: from `r₀ g₀ = r₁ g₁` and
-`r₀ x₀ g₀ = r₁ x₁ g₁` follows `(x₀ - x₁) r₀ g₀ = 0`, so `r₀ = 0`. Hence no explanation of the
-choice `0` is a bijection. This is why decryption mode is needed for receiver equivocality. -/
+/-- **In messy mode the PVW receiver does not satisfy the equivocation condition.** On a messy
+common string the keys of the two choices meet only at the secret `0`: from `r₀ g₀ = r₁ g₁` and `r₀
+x₀ g₀ = r₁ x₁ g₁` follows `(x₀ - x₁) r₀ g₀ = 0`, so `r₀ = 0`. Hence no explanation of the choice `0`
+is a bijection. -/
 theorem pvw_messy_not_equivocal (c : Crs Gp) {t : Bool → ZMod q} (hc : c.Messy t)
     (sim : ZMod q → Gp × Gp) (e : Bool → ZMod q → ZMod q) :
     ¬ ReceiverEquivocal (keyGen c) sim e := by
@@ -125,9 +134,9 @@ open PVW
 
 variable {q : ℕ} {Gp : Type*} [AddCommGroup Gp] [Module (ZMod q) Gp]
 
-/-- **The explained secret decrypts.** If the explanations make the PVW receiver equivocal, then
-the explained secret `e σ r` decrypts what the sender encrypts on branch `σ` under the simulated
-key: the explained state is consistent with the label the prover receives. -/
+/-- **The explained secret decrypts.** If the explanations satisfy the equivocation condition for
+the PVW receiver, then the explained secret `e σ r` decrypts what the sender encrypts on branch `σ`
+under the simulated key: the explained state is consistent with the label the prover receives. -/
 theorem pvw_explain_dec {c : Crs Gp} {e : Bool → ZMod q → ZMod q}
     (hRE : ReceiverEquivocal (keyGen c) (keyGen c false) e) (σ : Bool) (r : ZMod q) (m : Gp)
     (st : ZMod q × ZMod q) :
@@ -141,9 +150,10 @@ section CO
 
 variable {q : ℕ} {Gp : Type*} [AddCommGroup Gp] [Module (ZMod q) Gp] (g : Gp)
 
-/-- **The Chou–Orlandi receiver is receiver equivocal for a party that knows the sender's
-secret.** With `A = a g`, the message `b g + w A` of the choice `w` with randomness `b` is
-`b' g` for `b' = b + w a`, and the explanation subtracts `w a`. -/
+/-- **The Chou–Orlandi receiver satisfies the equivocation condition, with an explanation that uses
+the sender's secret** `a`, which is not a setup trapdoor. With `A = a g`, the message `b g + w A` of
+the choice `w` with randomness `b` is `b' g` for `b' = b + w a`, and the explanation subtracts `w
+a`. -/
 theorem co_equivocal (a : ZMod q) :
     ReceiverEquivocal (fun w b ↦ OT.rmsg g b w (a • g)) (fun b ↦ b • g)
       (fun w b ↦ if w then b - a else b) := by
@@ -180,11 +190,12 @@ theorem explainRand_bijective (hRE : ReceiverEquivocal msg sim e) (w : ℕ → B
   refine ⟨fun j ↦ Function.surjInv (hRE.1 (w j)).2 (t j), funext fun j ↦ ?_⟩
   exact Function.surjInv_eq (hRE.1 (w j)).2 (t j)
 
-/-- **Explaining the prover.** Let the OT receiver be receiver equivocal, and let the verifier
+/-- **Explaining the prover.** Let the OT receiver satisfy the equivocation condition, and let the
+verifier
 choose its messages `Ver B` as a function of the prover's OT messages `B`. For a witness `w`, the
 prover with the explained randomness sends the simulated OT messages, and the verifier's view of it
-(the opened label, or an abort) is the simulator's. With an ideal commitment this is everything a
-simulator must explain when the prover is corrupted [GKPS18, Sect. 3.2]. -/
+(the opened label, or an abort) is the simulator's. Only the receiver's first message is a real OT
+message; the labels are delivered ideally, as in `GcZk.Jko`. -/
 theorem explain_prover (hRE : ReceiverEquivocal msg sim e) (H : ℕ → V → V) (C : Circuit)
     (out : ℕ) {w : ℕ → Bool} (hw : (plain w C).getD out false = true)
     (Ver : (ℕ → M) → VerifierMsg V) (rs : ℕ → Rr) :
@@ -429,14 +440,13 @@ theorem pAcc_le_one (C : Circuit) (out : ℕ) (ι : V → Gp) (c : Crs Gp)
 variable (hcard : Fintype.card Gp = q)
 
 include hcard in
-/-- **Soundness in decryption mode.** The PVW OT is receiver equivocal in decryption mode
-(`pvw_dec_equivocal`), but not in messy mode (`pvw_messy_not_equivocal`); in decryption mode the
-sender is protected only computationally. A cheating prover
-`Pc c` that sees the common string `c` and makes at most `N₁` and `N₂` oracle queries convinces the
-verifier of an unsatisfiable circuit, on average over the decryption-mode strings, with probability
-at most the messy-mode bound of `GcZk.PVW.prob_accept_le` plus the DDH advantage of the acceptance
-probability plus `3 / q`. The switch between the modes is [PVW08, Theorem 5.2] (see
-`GcZk.PVW.abs_modes_le`). -/
+/-- **Soundness in decryption mode.** The PVW receiver satisfies the equivocation condition in
+decryption mode (`pvw_dec_equivocal`), but not in messy mode (`pvw_messy_not_equivocal`); in
+decryption mode the sender is protected only computationally. A cheating prover `Pc c` that sees the
+common string `c` and makes at most `N₁` and `N₂` oracle queries convinces the verifier of an
+unsatisfiable circuit, on average over the decryption-mode strings, with probability at most the
+messy-mode bound of `GcZk.PVW.prob_accept_le` plus the DDH advantage of the acceptance probability
+plus `3 / q`. The switch between the modes is [PVW08, Theorem 5.2] (see `GcZk.PVW.abs_modes_le`). -/
 theorem prob_accept_dec_le [Nontrivial V] [Nonempty D] (hq : 2 < q) (C : Circuit) (out : ℕ)
     (ι : V → Gp) (hC : ∀ x : ℕ → Bool, (plain x C).getD out false = false)
     (Pc : Crs Gp → PVW.Prover k q V R D Gp) (N₁ N₂ : ℕ)

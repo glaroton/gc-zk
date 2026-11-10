@@ -3,34 +3,45 @@
 
 \textbf{Status.} Everything in this chapter is formalized, and no originality is claimed.
 Section~\ref{sec:corruptions} describes what a simulator must explain when the prover is corrupted
-during or after the protocol of \cite{JKO13}. This chapter formalizes the protocol-specific facts
-behind that description. Receiver equivocality and its PVW instance are
-\cite[Sect.~3, Definition~3.1 and Theorem~3.2]{GKPS18}, and the explanation of the prover follows
-\cite[Sect.~3.2]{GKPS18}. The other statements we have not found published as such: that messy mode is not
-receiver equivocal follows from the form of the keys; the Chou--Orlandi equivocation given the sender's secret follows from the form of the messages; the
-equivocation of the hash commitment applies the programming of the random oracle recalled in
-\cite[Sect.~1.2]{GKPS18} to the games of Chapter~\ref{chap:commitment}; and soundness in
-decryption mode combines Theorem~\ref{thm:pvw-sound} with the indistinguishability of the modes
-\cite[Theorem~5.2]{PVW08}. Adaptive security itself, which needs a model of execution with
-corruptions such as the one of universal composability \cite[Sect.~7.1]{Can20}, is not defined
-here: the theorems below are the ingredients of a simulation, not the simulation.
+during or after the protocol of \cite{JKO13}. This chapter formalizes some protocol-specific facts
+behind that description. The equivocation condition of Definition~\ref{def:re-ot} is the condition
+on the receiver's message and randomness in \cite[Sect.~3, Definition~3.1]{GKPS18}, in a perfect
+version; the rest of that definition (a two-round OT that securely realizes the OT functionality in
+the common reference string model, and a simulator that uses only the trapdoor of the setup) is
+not formalized, and neither is DDH. The equivocation of the PVW receiver in decryption mode is the
+equivocation step of the proof of \cite[Theorem~3.2]{GKPS18}, and the explanation of the prover
+follows \cite[Sect.~3.2]{GKPS18}. The other statements we have not found published as such: that
+the explained PVW secret decrypts, and that messy mode does not satisfy the condition, follow from
+the form of the keys; the Chou--Orlandi equivocation given the sender's secret follows from the form
+of the messages; the equivocation of the hash commitment applies the programming of the random
+oracle recalled in \cite[Sect.~1.2]{GKPS18} to the games of Chapter~\ref{chap:commitment}; and
+soundness in decryption mode combines Theorem~\ref{thm:pvw-sound} with the indistinguishability of
+the modes \cite[Theorem~5.2]{PVW08}. Adaptive security itself, which needs a model of execution
+with corruptions such as the one of universal composability \cite[Sect.~7.1]{Can20}, is not
+defined here: the theorems below are some ingredients of a simulation, not the simulation. Among
+the missing ingredients are the consistency of the Chou--Orlandi outputs with an explained message,
+the composition of the explanations of the OT and of the commitment, zero knowledge with the PVW OT
+in decryption mode, and extraction against a corrupted prover.
 
-\section{Receiver-equivocal oblivious transfer}
+\section{The equivocation condition for the receiver}
 
-\begin{definition}[Receiver-equivocal OT]
+\begin{definition}[Equivocation condition]
   \label{def:re-ot}
   \lean{GcZk.AC.ReceiverEquivocal}
   \leanok
   Let the receiver of an OT send $\mathit{msg}(\sigma, r)$ for the choice bit $\sigma$ and the
-  randomness $r$. It is \emph{receiver equivocal}, with simulated message $\mathit{sim}$ and
-  explanations $e_0, e_1$, if each $e_\sigma$ is a bijection of the randomness and
+  randomness $r$. It satisfies the \emph{equivocation condition}, with simulated message $\mathit{sim}$ and explanations $e_0, e_1$, if each $e_\sigma$ is a bijection of the randomness and
   \[ \mathit{msg}(\sigma, e_\sigma(r)) = \mathit{sim}(r) \quad \text{for all } \sigma, r . \]
 \end{definition}
 
 A simulator sends $\mathit{sim}(r)$ for a uniform $r$, without the choice bit; told $\sigma$ later,
 it explains its message by the randomness $e_\sigma(r)$, which is uniform because $e_\sigma$ is a
-bijection. This is \cite[Sect.~3, Definition~3.1]{GKPS18}, where the explained randomness is only
-required to be statistically close to the honest one; here it has exactly the same distribution.
+bijection. This is the condition on messages and randomness of \cite[Sect.~3, Definition~3.1]{GKPS18},
+where the explained randomness is only required to be statistically close to the honest one; here
+it has exactly the same distribution. That definition also asks for a two-round OT that securely
+realizes the OT functionality in the common reference string model, with explanations computed by
+a simulator from the trapdoor of the setup; these requirements are not part of
+Definition~\ref{def:re-ot}, and who can compute the explanations is said for each instance below.
 
 \begin{theorem}[The PVW receiver in decryption mode]
   \label{thm:pvw-re}
@@ -38,8 +49,9 @@ required to be statistically close to the honest one; here it has exactly the sa
   \leanok
   \uses{def:re-ot, def:pvw-dec, lem:pvw-dec}
   On a decryption-mode common string, with $g_1 = y \cdot g_0$, $y \neq 0$ and $h_b = x \cdot g_b$,
-  the PVW receiver is receiver equivocal with simulated message $\mathit{keyGen}(0, r)$,
-  $e_0(r) = r$ and $e_1(r) = y^{-1} r$. Moreover, for any receiver-equivocal explanations, the
+  the PVW receiver satisfies the equivocation condition with simulated message
+  $\mathit{keyGen}(0, r)$, $e_0(r) = r$ and $e_1(r) = y^{-1} r$; the explanation uses the trapdoor
+  $y$ of the decryption setup. Moreover, for any explanations satisfying the condition, the
   explained secret $e_\sigma(r)$ decrypts what the sender encrypts on branch $\sigma$ under the
   simulated key.
 \end{theorem}
@@ -48,7 +60,8 @@ required to be statistically close to the honest one; here it has exactly the sa
   \leanok
   By Definition~\ref{def:pvw-dec}, $\mathit{keyGen}(1, r) = \mathit{keyGen}(0, y r)$, so
   $\mathit{keyGen}(1, y^{-1} r) = \mathit{keyGen}(0, r)$; multiplication by $y^{-1}$ is a bijection
-  of $\mathbb{Z}_q$. This is the proof of \cite[Theorem~3.2]{GKPS18} and the algorithm
+  of $\mathbb{Z}_q$. This is the equivocation step of the proof of \cite[Theorem~3.2]{GKPS18} and
+  the algorithm
   $\mathrm{TrapKeyGen}$ of \cite[Sect.~5.3]{PVW08}. The simulated key is the key of the choice
   $\sigma$ with secret $e_\sigma(r)$, so the second claim is the correctness of decryption
   (Lemma~\ref{lem:pvw-dec}).
@@ -59,8 +72,8 @@ required to be statistically close to the honest one; here it has exactly the sa
   \lean{GcZk.AC.pvw_messy_not_equivocal}
   \leanok
   \uses{def:re-ot, def:pvw}
-  On a messy common string the PVW receiver is not receiver equivocal, for any simulated message
-  and explanations.
+  On a messy common string the PVW receiver does not satisfy the equivocation condition, for any
+  simulated message and explanations.
 \end{proposition}
 
 \begin{proof}
@@ -70,16 +83,17 @@ required to be statistically close to the honest one; here it has exactly the sa
   and $g_0 \neq 0$. Hence $e_0$ is identically $0$, and it is not a bijection.
 \end{proof}
 
-This is why the instantiation of \cite[Sect.~3.3]{GKPS18} uses decryption mode: in messy mode the
-key determines the branch, which is what makes extraction possible (Lemma~\ref{lem:pvw-ext}).
+In our reading, this is why the instantiation of \cite[Sect.~3.3]{GKPS18} uses decryption mode: in
+messy mode the key determines the branch, which is what makes extraction possible
+(Lemma~\ref{lem:pvw-ext}).
 
 \begin{proposition}[The Chou--Orlandi receiver, given the sender's secret]
   \label{prop:co-re}
   \lean{GcZk.AC.co_equivocal}
   \leanok
   \uses{def:re-ot, def:co-ot}
-  Let $A = a \cdot g$. The receiver message $B = b \cdot g + wA$ is receiver equivocal with
-  simulated message $b \cdot g$ and explanations $e_0(b) = b$, $e_1(b) = b - a$.
+  Let $A = a \cdot g$. The receiver message $B = b \cdot g + wA$ satisfies the equivocation
+  condition with simulated message $b \cdot g$ and explanations $e_0(b) = b$, $e_1(b) = b - a$.
 \end{proposition}
 
 \begin{proof}
@@ -87,8 +101,10 @@ key determines the branch, which is what makes extraction possible (Lemma~\ref{l
   $(b - a) \cdot g + a \cdot g = b \cdot g$, and $b \mapsto b - a$ is a bijection.
 \end{proof}
 
-The explanation needs $a$, which the simulator knows when it plays the honest verifier, and
-otherwise learns only at the open-all step (Section~\ref{sec:corruptions}).
+The explanation needs the sender's secret $a$, which is not a trapdoor of a common string, so this
+does not make the Chou--Orlandi OT receiver equivocal in the sense of \cite[Definition~3.1]{GKPS18}.
+The simulator knows $a$ when it plays the honest verifier, and otherwise learns it only at the
+open-all step (Section~\ref{sec:corruptions}).
 
 \section{Explaining the prover}
 
@@ -97,12 +113,13 @@ otherwise learns only at the open-all step (Section~\ref{sec:corruptions}).
   \lean{GcZk.AC.explainRand, GcZk.AC.explainRand_bijective, GcZk.AC.explain_prover}
   \leanok
   \uses{def:re-ot, thm:zk}
-  Let the OT receiver be receiver equivocal, and let the verifier choose its message (the garbled
+  Let the OT receiver satisfy the equivocation condition, and let the verifier choose its message (the garbled
   circuit, the OT inputs and the seed it opens) as a function of the prover's OT messages. Let
   $C(w) = 1$, and let $r_j$ be the simulator's randomness for the $j$-th OT. With the explained
   randomness $e_{w_j}(r_j)$ the prover's OT messages are the simulated ones $\mathit{sim}(r_j)$,
   and the verifier's view of the prover is the output of the simulator of Theorem~\ref{thm:zk}.
-  The explained randomness is uniform when $r$ is.
+  The explained randomness is uniform when $r$ is. Here only the receiver's first message is a real
+  OT message: the delivery of the labels is the ideal one of Chapter~\ref{chap:jko}.
 \end{theorem}
 
 \begin{proof}
@@ -112,9 +129,13 @@ otherwise learns only at the open-all step (Section~\ref{sec:corruptions}).
   bijection in each coordinate.
 \end{proof}
 
-With an ideal commitment this is all a simulator must explain when the prover is corrupted after
-the execution \cite[Sect.~3.2]{GKPS18}: every step of the prover after the oblivious transfers is
-independent of the witness.
+According to \cite[Sect.~3.2]{GKPS18}, with an ideal commitment and an OT that is receiver
+equivocal in their sense, the prover's view of the OT is all a simulator must explain when the
+prover is corrupted after the execution, since every step of the prover after the oblivious
+transfers is independent of the witness. Theorem~\ref{thm:explain-prover} proves the part of this
+that concerns the receiver's messages and the verifier's view, with ideal delivery of the labels;
+for the PVW OT, Theorem~\ref{thm:pvw-re} adds that the explained secret decrypts the label of the
+actual choice.
 
 \section{Equivocating the hash commitment}
 
@@ -123,8 +144,11 @@ before opening hands over its output label $Z_w$ and its commitment randomness $
 execution its commitment is $G(Z_w, r)$. The simulator commits instead to a uniform $c$, without the
 witness, and at the corruption reveals $(Z_w, r)$ and sets $G(Z_w, r) := c$; this is possible in
 the \emph{programmable} random oracle model \cite[Sect.~1.2]{GKPS18}. We reuse the games of
-Definition~\ref{def:com-games}, with a check that always passes, so that the last message of the
-real game is $(Z_w, r)$.
+Definition~\ref{def:com-games}, with the prover's check of the opened seed removed (it always
+passes), so that the last message of the real game is always $(Z_w, r)$. The corruption thus takes
+place after the verifier has sent its seed, and the state revealed is only $(Z_w, r)$; the prover's
+OT messages are handled by Theorem~\ref{thm:explain-prover}, and the two explanations are not
+composed here.
 
 \begin{theorem}[Equivocation by programming the oracle]
   \label{thm:equivocate-rom}
@@ -132,7 +156,7 @@ real game is $(Z_w, r)$.
     GcZk.AC.card_realC_le,
     GcZk.AC.card_simC_le, GcZk.AC.equivocate_rom}
   \leanok
-  \uses{def:com-games, lem:hyb-real, lem:ans-update, thm:zk-rom}
+  \uses{def:com-games, lem:hyb-real, lem:hyb-sim, lem:ans-update, thm:zk-rom}
   Let a malicious verifier make $q_1$, $q_2$ and $q_3$ oracle queries before the commitment,
   between the commitment and the corruption, and after the corruption. Over $G$, $c$ and $r$
   uniform, the probabilities that it outputs $1$ in the real execution and against the simulator
@@ -153,7 +177,7 @@ real game is $(Z_w, r)$.
 
 \section{Soundness in decryption mode}
 
-The PVW OT is receiver equivocal in decryption mode, while the soundness of
+The PVW receiver satisfies the equivocation condition in decryption mode, while the soundness of
 Theorem~\ref{thm:pvw-sound} uses messy mode, where the sender is statistically protected. Switching
 the modes costs the DDH advantage of the acceptance probability.
 
@@ -168,7 +192,9 @@ the modes costs the DDH advantage of the acceptance probability.
   the verifier accepts with probability at most
   \[ \frac{N_1 + 1}{|V| - 1} + \frac{N_1^2 + N_2 + 1}{|D|} + \mathrm{Adv}_{\mathrm{DDH}}(p_{\mathrm{acc}})
      + \frac{3}{q} , \]
-  where $p_{\mathrm{acc}}$ is the acceptance probability as a function of the common string.
+  where $p_{\mathrm{acc}}$ is the acceptance probability as a function of the common string. The bound
+  holds on average over the setup, not for each string; as in Theorem~\ref{thm:pvw-zk-ddh}, the
+  efficiency of the distinguisher $p_{\mathrm{acc}}$ is outside the formalization.
 \end{theorem}
 
 \begin{proof}

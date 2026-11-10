@@ -68,7 +68,7 @@ positions avoids carrying a well-formedness hypothesis through every statement.
   and sending the single ciphertext $H(A) \oplus H(A \oplus R) \oplus B$, where $R$ is the global
   offset. With $A = L_s$, $B = L_z + L_o$ (the zero-label of $z \oplus o$) and $R = \Delta$, this is
   $T_i$, and the free XOR with $z$ turns $C$ into $L_i = H(i, L_s) + L_z$. The gate position $i$ in
-  the hash plays the role of their gate index. Garbling every AND gate this way, with free XOR
+  the hash plays the role of their gate index $j$ \cite[Sect.~3.2]{ZRE15}. Garbling every AND gate this way, with free XOR
   gates, is their privacy-free scheme \cite[Sect.~6]{ZRE15}.
 \end{remark}
 
