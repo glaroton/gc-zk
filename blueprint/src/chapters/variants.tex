@@ -88,14 +88,16 @@ soundness is exactly the authenticity game (Theorems~\ref{thm:zk} and~\ref{thm:s
 \emph{Hash commitment in the random oracle model.} Zero knowledge becomes statistical, with error
 at most $(q_1+q_2+q_3)/|R|$ for a verifier making $q_1+q_2+q_3$ oracle queries; the simulator
 \emph{programs} the oracle (Theorem~\ref{thm:zk-rom}). Soundness goes through an extractor that
-reads the prover's queries, at an extra cost $(n_1^2+n_2+1)/|D|$ (Theorems~\ref{thm:binding}
+reads the prover's queries, at an extra cost $(q_1^2+q_2+1)/|D|$ for $q_1$ queries before the
+commitment and $q_2$ after it ($n_1$ and $n_2$ in Theorem~\ref{thm:e2e}) (Theorems~\ref{thm:binding}
 and~\ref{thm:e2e}).
 
 \emph{PVW OT with a common string.} In messy mode the receiver's choice is extractable, and
 soundness keeps the bound of the hybrid model (Theorem~\ref{thm:pvw-sound}). Zero knowledge is
 computational: it is reduced to DDH by two explicit distinguishers between the modes
-(Theorems~\ref{thm:pvw-zk-modes} and~\ref{thm:pvw-zk-ddh}). The sender must reject the receiver key
-$(0, 0)$ (Lemma~\ref{lem:pvw-ext}).
+(Theorems~\ref{thm:pvw-zk-modes} and~\ref{thm:pvw-zk-ddh}). The receiver key $(0, 0)$ sends the messages in the
+clear, and the sender in this library rejects every key whose first component is $0$
+(Lemma~\ref{lem:pvw-ext}).
 
 \emph{Chou--Orlandi OT in the random oracle model, without common string.} Receiver privacy is
 perfect and zero knowledge holds with the real OT and the hash commitment

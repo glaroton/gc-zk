@@ -202,28 +202,36 @@ theorem hvzk (H : ℕ → V → V) (C : Circuit) (out : ℕ) (σ : Seed V) {w : 
 /-- The circuit `x₀ ⊕ x₁`, with output node `2`. -/
 def xorCircuit : Circuit := [.input 0, .input 1, .xor 0 1]
 
-/-- A malicious verifier message: honest material for `xorCircuit`, but the OT pairs `(0, a)` for
-input `0` and `(0, 0)` for input `1`, which are not of the form `(L, L + Δ)` for a single `Δ`. -/
-def leakMsg (a : V) : VerifierMsg V :=
-  ⟨[.free, .free, .free], fun j ↦ if j = 0 then (0, a) else (0, 0), ⟨0, fun _ ↦ 0, fun _ ↦ 0⟩⟩
+/-- A malicious verifier message: honest material for `xorCircuit`, the OT pairs `(0, a)` for input
+`0` and `(0, 0)` for input `1`, and any opened seed `σ`. For `a ≠ 0` the pairs are not of the form
+`(L, L + Δ)` for a single `Δ`. -/
+def leakMsg (a : V) (σ : Seed V) : VerifierMsg V :=
+  ⟨[.free, .free, .free], fun j ↦ if j = 0 then (0, a) else (0, 0), σ⟩
 
 omit [Module (ZMod 2) V] in
 /-- **Without the prover's check, zero knowledge fails.** The two witnesses `(1, 0)` and `(0, 1)`
-of `x₀ ⊕ x₁` lead the prover, on `leakMsg a` with `a ≠ 0`, to the labels `a` and `0`, so a prover
-that sends its label without checking reveals its first witness bit. The prover's check rejects
-this message, so in the full protocol the view is an abort for both witnesses. -/
-theorem no_check_leaks (H : ℕ → V → V) {a : V} (ha : a ≠ 0) :
+of `x₀ ⊕ x₁` lead the prover, on `leakMsg a σ` with `a ≠ 0`, to the labels `a` and `0`, so a prover
+that sends its label without checking reveals its first witness bit. Whatever seed `σ` the
+verifier opens, the prover's check rejects this message, so in the full protocol the view is an
+abort for both witnesses. -/
+theorem no_check_leaks (H : ℕ → V → V) {a : V} (ha : a ≠ 0) (σ : Seed V) :
     (plain (fun j ↦ decide (j = 0)) xorCircuit).getD 2 false = true ∧
       (plain (fun j ↦ decide (j = 1)) xorCircuit).getD 2 false = true ∧
-      proverLabel H xorCircuit 2 (fun j ↦ decide (j = 0)) (leakMsg a) = a ∧
-      proverLabel H xorCircuit 2 (fun j ↦ decide (j = 1)) (leakMsg a) = 0 ∧
-      ¬ Verified H xorCircuit (leakMsg a) := by
+      proverLabel H xorCircuit 2 (fun j ↦ decide (j = 0)) (leakMsg a σ) = a ∧
+      proverLabel H xorCircuit 2 (fun j ↦ decide (j = 1)) (leakMsg a σ) = 0 ∧
+      ¬ Verified H xorCircuit (leakMsg a σ) := by
   refine ⟨by decide, by decide, ?_, ?_, ?_⟩
   · simp [proverLabel, eval, evalAux, evalNode, otReceive, leakMsg, xorCircuit]
   · simp [proverLabel, eval, evalAux, evalNode, otReceive, leakMsg, xorCircuit]
   · rintro ⟨-, h⟩
     have h0 := h 0
-    simp only [leakMsg, ↓reduceIte, Prod.mk.injEq, add_zero, true_and] at h0
-    exact ha h0
+    have h1 := h 1
+    simp only [leakMsg, ↓reduceIte, Prod.mk.injEq] at h0
+    simp only [leakMsg, one_ne_zero, ↓reduceIte, Prod.mk.injEq] at h1
+    obtain ⟨h0i, h0d⟩ := h0
+    obtain ⟨h1i, h1d⟩ := h1
+    rw [← h1i, zero_add] at h1d
+    rw [← h0i, zero_add, ← h1d] at h0d
+    exact ha h0d
 
 end GcZk.Jko

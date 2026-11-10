@@ -30,7 +30,8 @@ Circuits are built from inputs, constants, XOR gates and multiplexers.
 
 \section*{What the protocol is for}
 
-The protocol is an interactive zero-knowledge proof of knowledge for statements of the form ``I
+The protocol is an interactive zero-knowledge argument of knowledge (soundness holds against
+provers with bounded resources) for statements of the form ``I
 know $w$ with $C(w) = 1$'', where $C$ is any Boolean circuit known to both parties. Its cost is
 proportional to the size of $C$ \cite[Sect.~1]{JKO13}, and it uses only symmetric primitives (a hash) besides the
 oblivious transfers, one per bit of the witness. It is therefore suited to statements without
@@ -80,8 +81,8 @@ or makes their bounds useless.
   This is the situation of the Chou--Orlandi OT, where a receiver can delay its decryption; it is
   treated in Chapters~\ref{chap:adaptive} and~\ref{chap:co-soundness}.
   \item \emph{Weak oblivious transfer keys.} With the PVW OT, a receiver key $(0, 0)$ makes every
-  ciphertext carry its message in the clear, so the sender must reject it
-  (Lemma~\ref{lem:pvw-ext}). With the Chou--Orlandi OT, a secret $a_j = 0$ makes the two masks of
+  ciphertext carry its message in the clear; the sender in this library rejects every key whose
+  first component is $0$ (Lemma~\ref{lem:pvw-ext}). With the Chou--Orlandi OT, a secret $a_j = 0$ makes the two masks of
   input $j$ equal; this costs $k/q$ in the soundness bound (Theorem~\ref{thm:co-sound}).
   \item \emph{An unsuitable hash.} Correlation robustness of the hash alone is not enough to prove
   Free XOR secure: Choi, Katz, Kumaresan and Zhou rule out a fully black-box reduction
@@ -144,7 +145,9 @@ constraints, and the efficiency of the reductions, are outside the formalization
 offset. The letter $q$ has two uses: in Chapters~\ref{chap:random-oracle} and~\ref{chap:adaptive}
 it is the number of queries (or actions) of the adversary; in Chapters~\ref{chap:ot},
 \ref{chap:pvw} and~\ref{chap:co-soundness} it is the order of the group $\mathbb{G}$ with
-generator $g$, and numbers of queries are written $q_0, \dots, q_3$, $Q$ or $n_0, n_1, n_2$. From
+generator $g$, and numbers of queries are written $q_0, \dots, q_3$, $Q$ or $n_0, n_1, n_2$.
+Chapter~\ref{chap:variants}, which summarizes all of them, uses $q$ in both senses, each time as
+in the chapter it refers to. From
 Chapter~\ref{chap:commitment} on, $G$ is the commitment oracle, distinct from the group
 $\mathbb{G}$. A
 circuit input is $x$ (or the witness $w$), and $b$ is a bit, except in the oblivious transfers,

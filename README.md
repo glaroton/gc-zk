@@ -13,7 +13,7 @@ with `leanblueprint pdf` or `leanblueprint web`. The original plan is in [DESIGN
 
 ## What the protocol is for
 
-JKO13 is an interactive zero-knowledge proof of knowledge for statements "I know `w` with
+JKO13 is an interactive zero-knowledge argument of knowledge for statements "I know `w` with
 `C(w) = 1`", for any Boolean circuit `C`. Its cost is proportional to the size of `C`, and besides
 one oblivious transfer per witness bit it uses only a hash, so it suits statements without
 algebraic structure.
@@ -30,7 +30,8 @@ algebraic structure.
   garbling (a malicious verifier can garble another circuit or mount a selective-failure attack);
   sending the garbled circuit before the OTs, or an OT that lets the prover choose its input late
   (the garbling must then be adaptively secure; this is the Chou–Orlandi case); accepting the PVW
-  key `(0, 0)`, which sends the messages in the clear; a hash that is only correlation robust
+  key `(0, 0)`, which sends the messages in the clear (the sender here rejects every key with first
+  component `0`); a hash that is only correlation robust
   (Choi–Katz–Kumaresan–Zhou, TCC 2012); short labels.
 
 The introduction of the blueprint discusses each point and the theorem it relates to.
