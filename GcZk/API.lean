@@ -11,7 +11,7 @@ import GcZk
 `import GcZk.API` (or `import GcZk`) gives the whole library. The declarations listed here are
 the ones meant to be used by other projects. Their names and statements are kept stable across
 versions: a renamed declaration keeps its old name as a `@[deprecated]` alias for at least one
-release, and a changed statement is recorded in the changelog. Every other declaration is an
+release, and a changed statement is recorded in `CHANGELOG.md`. Every other declaration is an
 implementation detail and may change. The blueprint documents each statement in the usual
 mathematical language; its labels (`thm:zk`, `thm:co-sound`, ...) are stable as well.
 

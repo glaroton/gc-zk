@@ -113,14 +113,20 @@ memory. One module at a time needs at most about 5 GB.
 ## Using gc-zk from another project
 
 Add gc-zk as a Lake dependency, pinned to a release tag, and `import GcZk`. It requires only Mathlib.
+In a `lakefile.lean`:
+
+```lean
+require «gc-zk» from git "https://github.com/glaroton/gc-zk" @ "v0.1.0"
+```
+
 A project that depends on it must use the same Lean and Mathlib versions, given in
 `lean-toolchain` and `lakefile.lean` (currently Lean `v4.36.0-rc2` and the Mathlib tag of the same
-name).
+name). The releases are listed on GitHub, and `CHANGELOG.md` records the changes of each one.
 
 The declarations meant for other projects are listed in `GcZk/API.lean`: the protocol, the
 simulators, and the zero-knowledge, soundness and authenticity theorems. Their names and statements
 are kept stable; a renamed declaration keeps its old name as a deprecated alias for at least one
-release, and changes are recorded at each release. Everything else is an implementation detail.
+release, and changes are recorded in `CHANGELOG.md`. Everything else is an implementation detail.
 The module root `GcZk` and the namespaces `GcZk.*` do not clash with those of other libraries.
 
 ## Contents
