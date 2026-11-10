@@ -27,14 +27,15 @@ belongs to a framework such as universal composability.
   [GKPS18, Sect. 3, Definition 3.1].
 * `GcZk.AC.pvw_dec_equivocal`: the PVW receiver in decryption mode is receiver equivocal
   [GKPS18, Sect. 3.3, Theorem 3.2], exactly (the explained randomness is uniform).
+* `GcZk.AC.pvw_explain_dec`: the explained secret decrypts the branch of the actual choice, so the
+  explained state is consistent with the labels the prover receives.
 * `GcZk.AC.co_equivocal`: the Chou–Orlandi receiver is receiver equivocal for a party that knows
   the sender's secret `a`.
 * `GcZk.AC.explain_prover`: with a receiver-equivocal OT, the prover's OT messages and its revealed
   view, for any witness and the explained randomness, are the simulated ones.
 * `GcZk.AC.equivocate_rom`: the hash commitment can be equivocated by programming the oracle: a
   prover corrupted after committing reveals `(Z_w, r)`, and a simulator that committed to a
-  uniform value and programs `G(Z_w, r)` at the corruption is off by at most
-  `(q₁ + q₂ + q₃) / |R|`.
+  uniform value and programs `G(Z_w, r)` at the corruption is off by at most `(q₁ + q₂) / |R|`.
 * `GcZk.AC.prob_accept_dec_le`: soundness with the PVW OT in decryption mode, the mode in which it
   is receiver equivocal: averaged over decryption-mode strings, the acceptance probability is at
   most the messy-mode bound plus the DDH advantage of an explicit distinguisher plus `3 / q`.
@@ -91,6 +92,24 @@ theorem pvw_dec_equivocal' (c : Crs Gp) (hc : c.Dec q) :
   exact ⟨_, pvw_dec_equivocal c hy0 hy hh⟩
 
 end PVW
+
+section PVWExplain
+
+open PVW
+
+variable {q : ℕ} {Gp : Type*} [AddCommGroup Gp] [Module (ZMod q) Gp]
+
+/-- **The explained secret decrypts.** If the explanations make the PVW receiver equivocal, then
+the explained secret `e σ r` decrypts what the sender encrypts on branch `σ` under the simulated
+key: the explained state is consistent with the label the prover receives. -/
+theorem pvw_explain_dec {c : Crs Gp} {e : Bool → ZMod q → ZMod q}
+    (hRE : ReceiverEquivocal (keyGen c) (keyGen c false) e) (σ : Bool) (r : ZMod q) (m : Gp)
+    (st : ZMod q × ZMod q) :
+    dec (e σ r) (enc c (keyGen c false r) σ m st) = m := by
+  rw [← hRE.2 σ r]
+  exact dec_enc c σ (e σ r) m st
+
+end PVWExplain
 
 section CO
 
@@ -163,9 +182,10 @@ open Com Jko
 variable {V R D : Type*} [AddCommGroup V] [Module (ZMod 2) V]
   (H : ℕ → V → V) (C : Circuit) (o : ℕ) (w : ℕ → Bool) (A : MalV V R D)
 
-/-- The prover's state after the commitment, revealed at the corruption: its output label and the
-commitment randomness. In `GcZk.Com` it is the last message under a check that always passes. -/
-def always : List D → D → List D → Prop := fun _ _ _ ↦ True
+/-- The check that always passes. With it, the last message `GcZk.Com.realFin` of the games of
+`GcZk.Com` is always `(Z_w, r)`: the prover's state after the commitment (its output label and its
+commitment randomness), which a corrupted prover reveals. -/
+def noCheck : List D → D → List D → Prop := fun _ _ _ ↦ True
 
 variable [DecidableEq V] [DecidableEq R]
 
@@ -174,18 +194,26 @@ the oracle queries with `G` until the corruption, and then, knowing the witness,
 `(Z_w, r)` and programs `G(Z_w, r) := c`. -/
 noncomputable def simC (G : V × R → D) (c : D) (r : R) : Bool :=
   play A G G (fun _ ↦ Function.update G (point H C o w A G r) c) c
-    (realFin H C o w A always r)
+    (realFin H C o w A noCheck r)
 
 omit [Module (ZMod 2) V] in
 /-- Off the bad events, the hybrid of `GcZk.Com` and the corruption simulator agree: they differ
 only in the oracle of the second phase, which is programmed in the hybrid. -/
 theorem hyb_eq_simC (G : V × R → D) (c : D) (r : R)
-    (h : ¬ Bad₂₃ H C o w A always G c r) :
-    hyb H C o w A always G c r = simC H C o w A G c r := by
+    (h : ¬ Bad₂₃ H C o w A noCheck G c r) :
+    hyb H C o w A noCheck G c r = simC H C o w A G c r := by
   simp only [Bad₂₃, not_or] at h
   have e2 := ans_update G (A.Q₂ (ans G A.Q₁ A.q₁) c) A.q₂ (point H C o w A G r) c h.1
   unfold hyb simC play
   rw [e2]
+
+omit [Module (ZMod 2) V] [DecidableEq V] [DecidableEq R] in
+/-- With `noCheck` the last message is never an abort, so the bad event of the second and third
+phases is a query of the second phase at the commitment point. -/
+theorem bad₂₃_noCheck (G : V × R → D) (c : D) (r : R) :
+    Bad₂₃ H C o w A noCheck G c r ↔
+      Hits G (A.Q₂ (ans G A.Q₁ A.q₁) c) A.q₂ (point H C o w A G r) := by
+  simp [Bad₂₃, realFin, noCheck]
 
 section Counting
 
@@ -194,13 +222,13 @@ variable [Fintype V] [Fintype R] [Fintype D]
 omit [Module (ZMod 2) V] in
 open Classical in
 theorem card_realC_le (r : R) :
-    (Finset.univ.filter fun x : (V × R → D) × D ↦ real H C o w A always x.1 r).card ≤
+    (Finset.univ.filter fun x : (V × R → D) × D ↦ real H C o w A noCheck x.1 r).card ≤
       (Finset.univ.filter fun x : (V × R → D) × D ↦ simC H C o w A x.1 x.2 r).card +
         (Finset.univ.filter fun x : (V × R → D) × D ↦ Bad₁ H C o w A x.1 r).card +
-        (Finset.univ.filter fun x : (V × R → D) × D ↦ Bad₂₃ H C o w A always x.1 x.2 r).card := by
-  have h1 : (Finset.univ.filter fun x : (V × R → D) × D ↦ real H C o w A always x.1 r).card ≤
+        (Finset.univ.filter fun x : (V × R → D) × D ↦ Bad₂₃ H C o w A noCheck x.1 x.2 r).card := by
+  have h1 : (Finset.univ.filter fun x : (V × R → D) × D ↦ real H C o w A noCheck x.1 r).card ≤
       (Finset.univ.filter fun x : (V × R → D) × D ↦
-        ¬ Bad₁ H C o w A x.1 r ∧ real H C o w A always x.1 r).card +
+        ¬ Bad₁ H C o w A x.1 r ∧ real H C o w A noCheck x.1 r).card +
       (Finset.univ.filter fun x : (V × R → D) × D ↦ Bad₁ H C o w A x.1 r).card := by
     refine (Finset.card_le_card fun x hx ↦ ?_).trans (Finset.card_union_le _ _)
     simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_union] at hx ⊢
@@ -208,12 +236,12 @@ theorem card_realC_le (r : R) :
     · exact Or.inr hb
     · exact Or.inl ⟨hb, hx⟩
   have h2 : (Finset.univ.filter fun x : (V × R → D) × D ↦
-        ¬ Bad₁ H C o w A x.1 r ∧ hyb H C o w A always x.1 x.2 r).card ≤
+        ¬ Bad₁ H C o w A x.1 r ∧ hyb H C o w A noCheck x.1 x.2 r).card ≤
       (Finset.univ.filter fun x : (V × R → D) × D ↦ simC H C o w A x.1 x.2 r).card +
-      (Finset.univ.filter fun x : (V × R → D) × D ↦ Bad₂₃ H C o w A always x.1 x.2 r).card := by
+      (Finset.univ.filter fun x : (V × R → D) × D ↦ Bad₂₃ H C o w A noCheck x.1 x.2 r).card := by
     refine (Finset.card_le_card fun x hx ↦ ?_).trans (Finset.card_union_le _ _)
     simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_union] at hx ⊢
-    by_cases hb : Bad₂₃ H C o w A always x.1 x.2 r
+    by_cases hb : Bad₂₃ H C o w A noCheck x.1 x.2 r
     · exact Or.inr hb
     · exact Or.inl ((hyb_eq_simC H C o w A x.1 x.2 r hb) ▸ hx.2)
   rw [← card_hyb_eq_card_real] at h1
@@ -223,25 +251,25 @@ omit [Module (ZMod 2) V] in
 open Classical in
 theorem card_simC_le (r : R) :
     (Finset.univ.filter fun x : (V × R → D) × D ↦ simC H C o w A x.1 x.2 r).card ≤
-      (Finset.univ.filter fun x : (V × R → D) × D ↦ real H C o w A always x.1 r).card +
+      (Finset.univ.filter fun x : (V × R → D) × D ↦ real H C o w A noCheck x.1 r).card +
         (Finset.univ.filter fun x : (V × R → D) × D ↦ Bad₁ H C o w A x.1 r).card +
-        (Finset.univ.filter fun x : (V × R → D) × D ↦ Bad₂₃ H C o w A always x.1 x.2 r).card := by
+        (Finset.univ.filter fun x : (V × R → D) × D ↦ Bad₂₃ H C o w A noCheck x.1 x.2 r).card := by
   have h1 : (Finset.univ.filter fun x : (V × R → D) × D ↦ simC H C o w A x.1 x.2 r).card ≤
       (Finset.univ.filter fun x : (V × R → D) × D ↦
-        ¬ Bad₁ H C o w A x.1 r ∧ hyb H C o w A always x.1 x.2 r).card +
+        ¬ Bad₁ H C o w A x.1 r ∧ hyb H C o w A noCheck x.1 x.2 r).card +
       ((Finset.univ.filter fun x : (V × R → D) × D ↦ Bad₁ H C o w A x.1 r).card +
-      (Finset.univ.filter fun x : (V × R → D) × D ↦ Bad₂₃ H C o w A always x.1 x.2 r).card) := by
+      (Finset.univ.filter fun x : (V × R → D) × D ↦ Bad₂₃ H C o w A noCheck x.1 x.2 r).card) := by
     refine (Finset.card_le_card fun x hx ↦ ?_).trans ((Finset.card_union_le _ _).trans
       (Nat.add_le_add_left (Finset.card_union_le _ _) _))
     simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_union] at hx ⊢
     by_cases hb : Bad₁ H C o w A x.1 r
     · exact Or.inr (Or.inl hb)
-    by_cases hb' : Bad₂₃ H C o w A always x.1 x.2 r
+    by_cases hb' : Bad₂₃ H C o w A noCheck x.1 x.2 r
     · exact Or.inr (Or.inr hb')
     exact Or.inl ⟨hb, (hyb_eq_simC H C o w A x.1 x.2 r hb').symm ▸ hx⟩
   have h2 : (Finset.univ.filter fun x : (V × R → D) × D ↦
-        ¬ Bad₁ H C o w A x.1 r ∧ real H C o w A always x.1 r).card ≤
-      (Finset.univ.filter fun x : (V × R → D) × D ↦ real H C o w A always x.1 r).card :=
+        ¬ Bad₁ H C o w A x.1 r ∧ real H C o w A noCheck x.1 r).card ≤
+      (Finset.univ.filter fun x : (V × R → D) × D ↦ real H C o w A noCheck x.1 r).card :=
     Finset.card_le_card fun x hx ↦ Finset.mem_filter.2 ⟨Finset.mem_univ _,
       (Finset.mem_filter.1 hx).2.2⟩
   rw [card_hyb_eq_card_real] at h1
@@ -253,38 +281,50 @@ open Classical in
 commitment and receives the prover's state `(Z_w, r)`. In the real execution the commitment is
 `G(Z_w, r)`. The simulator commits to a uniform `c` without the witness and, at the corruption,
 reveals `(Z_w, r)` and programs `G(Z_w, r) := c` (`simC`). Over `G`, `c` and `r` uniform, the
-probabilities that the verifier outputs `1` differ by at most `(q₁ + q₂ + q₃) / |R|`. -/
+probabilities that the verifier outputs `1` differ by at most `(q₁ + q₂) / |R|`: the queries made
+after the corruption cost nothing, since both games then answer with the programmed oracle. -/
 theorem equivocate_rom [Nonempty R] [Nonempty D] :
     |((∑ r : R, (Finset.univ.filter fun x : (V × R → D) × D ↦
-        real H C o w A always x.1 r).card : ℕ) : ℝ) /
+        real H C o w A noCheck x.1 r).card : ℕ) : ℝ) /
         (Fintype.card ((V × R → D) × D) * Fintype.card R) -
       ((∑ r : R, (Finset.univ.filter fun x : (V × R → D) × D ↦
           simC H C o w A x.1 x.2 r).card : ℕ) : ℝ) /
         (Fintype.card ((V × R → D) × D) * Fintype.card R)| ≤
-      ((A.q₁ + A.q₂ + A.q₃ : ℕ) : ℝ) / Fintype.card R := by
+      ((A.q₁ + A.q₂ : ℕ) : ℝ) / Fintype.card R := by
   set Sr := ∑ r : R, (Finset.univ.filter fun x : (V × R → D) × D ↦
-    real H C o w A always x.1 r).card
+    real H C o w A noCheck x.1 r).card
   set Ss := ∑ r : R, (Finset.univ.filter fun x : (V × R → D) × D ↦ simC H C o w A x.1 x.2 r).card
   set B₁ := ∑ r : R, (Finset.univ.filter fun x : (V × R → D) × D ↦ Bad₁ H C o w A x.1 r).card
   set B₂ := ∑ r : R, (Finset.univ.filter fun x : (V × R → D) × D ↦
-    Bad₂₃ H C o w A always x.1 x.2 r).card
+    Bad₂₃ H C o w A noCheck x.1 x.2 r).card
   set X := Fintype.card ((V × R → D) × D)
-  set n := A.q₁ + A.q₂ + A.q₃
-  have hB : B₁ + B₂ ≤ n * X := sum_bad_le H C o w A always
+  set n := A.q₁ + A.q₂
+  have hB : B₁ + B₂ ≤ n * X := by
+    -- The same verifier without the queries of the third phase has the same bad events.
+    have h := sum_bad_le H C o w ({ A with q₃ := 0 } : MalV V R D) noCheck
+    have e : B₂ = ∑ r : R, (Finset.univ.filter fun x : (V × R → D) × D ↦
+        Bad₂₃ H C o w ({ A with q₃ := 0 } : MalV V R D) noCheck x.1 x.2 r).card := by
+      refine Finset.sum_congr rfl fun r _ ↦ congrArg Finset.card
+        (Finset.filter_congr fun x _ ↦ ?_)
+      rw [bad₂₃_noCheck, bad₂₃_noCheck]
+      rfl
+    rw [e]
+    simp only [add_zero] at h
+    exact h
   have hr : Sr ≤ Ss + B₁ + B₂ := by
     calc Sr ≤ ∑ r : R, ((Finset.univ.filter fun x : (V × R → D) × D ↦
             simC H C o w A x.1 x.2 r).card +
           (Finset.univ.filter fun x : (V × R → D) × D ↦ Bad₁ H C o w A x.1 r).card +
           (Finset.univ.filter fun x : (V × R → D) × D ↦
-            Bad₂₃ H C o w A always x.1 x.2 r).card) :=
+            Bad₂₃ H C o w A noCheck x.1 x.2 r).card) :=
           Finset.sum_le_sum fun r _ ↦ card_realC_le H C o w A r
       _ = Ss + B₁ + B₂ := by simp only [Finset.sum_add_distrib, Ss, B₁, B₂]
   have hs : Ss ≤ Sr + B₁ + B₂ := by
     calc Ss ≤ ∑ r : R, ((Finset.univ.filter fun x : (V × R → D) × D ↦
-            real H C o w A always x.1 r).card +
+            real H C o w A noCheck x.1 r).card +
           (Finset.univ.filter fun x : (V × R → D) × D ↦ Bad₁ H C o w A x.1 r).card +
           (Finset.univ.filter fun x : (V × R → D) × D ↦
-            Bad₂₃ H C o w A always x.1 x.2 r).card) :=
+            Bad₂₃ H C o w A noCheck x.1 x.2 r).card) :=
           Finset.sum_le_sum fun r _ ↦ card_simC_le H C o w A r
       _ = Sr + B₁ + B₂ := by simp only [Finset.sum_add_distrib, Sr, B₁, B₂]
   have hX : (0 : ℝ) < X := by exact_mod_cast Fintype.card_pos
@@ -363,12 +403,13 @@ theorem pAcc_le_one (C : Circuit) (out : ℕ) (ι : V → Gp) (c : Crs Gp)
 variable (hcard : Fintype.card Gp = q)
 
 include hcard in
-/-- **Soundness in decryption mode.** The PVW OT is receiver equivocal only in decryption mode
-(`pvw_dec_equivocal`), where it is not statistically sender private. A cheating prover `Pc c` that
-sees the common string `c` and makes at most `N₁` and `N₂` oracle queries convinces the verifier of
-an unsatisfiable circuit, on average over the decryption-mode strings, with probability at most the
-messy-mode bound of `GcZk.PVW.prob_accept_le` plus the DDH advantage of the acceptance probability
-plus `3 / q`. The switch between the modes is [PVW08, Theorem 5.2] (see `GcZk.PVW.abs_modes_le`). -/
+/-- **Soundness in decryption mode.** The PVW OT is receiver equivocal in decryption mode
+(`pvw_dec_equivocal`), where the sender is protected only computationally. A cheating prover
+`Pc c` that sees the common string `c` and makes at most `N₁` and `N₂` oracle queries convinces the
+verifier of an unsatisfiable circuit, on average over the decryption-mode strings, with probability
+at most the messy-mode bound of `GcZk.PVW.prob_accept_le` plus the DDH advantage of the acceptance
+probability plus `3 / q`. The switch between the modes is [PVW08, Theorem 5.2] (see
+`GcZk.PVW.abs_modes_le`). -/
 theorem prob_accept_dec_le [Nontrivial V] [Nonempty D] (hq : 2 < q) (C : Circuit) (out : ℕ)
     (ι : V → Gp) (hC : ∀ x : ℕ → Bool, (plain x C).getD out false = false)
     (Pc : Crs Gp → PVW.Prover k q V R D Gp) (N₁ N₂ : ℕ)

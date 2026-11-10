@@ -1,16 +1,19 @@
 \chapter{Ingredients for adaptive corruptions}
 \label{chap:corruption}
 
+\textbf{Status.} Everything in this chapter is formalized, and no originality is claimed.
 Section~\ref{sec:corruptions} describes what a simulator must explain when the prover is corrupted
 during or after the protocol of \cite{JKO13}. This chapter formalizes the protocol-specific facts
-behind that description: receiver equivocality of the PVW OT in decryption mode
-\cite[Sect.~3.3, Theorem~3.2]{GKPS18} and of the Chou--Orlandi OT for a party that knows the
-sender's secret; the explanation of the prover's OT messages and of its revealed label for any
-witness \cite[Sect.~3.2]{GKPS18}; the equivocation of the hash commitment by programming the
-random oracle; and soundness with the PVW OT in decryption mode, the mode in which it is receiver
-equivocal. None of these statements is new. Adaptive security itself, which needs a model of
-execution with corruptions such as the one of universal composability \cite[Sect.~7.1]{Can20}, is
-not defined here.
+behind that description. Receiver equivocality and its PVW instance are
+\cite[Sect.~3, Definition~3.1 and Theorem~3.2]{GKPS18}, and the explanation of the prover follows
+\cite[Sect.~3.2]{GKPS18}. The other three statements we have not found published as such: the
+Chou--Orlandi equivocation given the sender's secret follows from the form of the messages; the
+equivocation of the hash commitment applies the programming of the random oracle recalled in
+\cite[Sect.~1.2]{GKPS18} to the games of Chapter~\ref{chap:commitment}; and soundness in
+decryption mode combines Theorem~\ref{thm:pvw-sound} with the indistinguishability of the modes
+\cite[Theorem~5.2]{PVW08}. Adaptive security itself, which needs a model of execution with
+corruptions such as the one of universal composability \cite[Sect.~7.1]{Can20}, is not defined
+here: the theorems below are the ingredients of a simulation, not the simulation.
 
 \section{Receiver-equivocal oblivious transfer}
 
@@ -31,12 +34,14 @@ required to be statistically close to the honest one; here it has exactly the sa
 
 \begin{theorem}[The PVW receiver in decryption mode]
   \label{thm:pvw-re}
-  \lean{GcZk.AC.pvw_dec_equivocal, GcZk.AC.pvw_dec_equivocal'}
+  \lean{GcZk.AC.pvw_dec_equivocal, GcZk.AC.pvw_dec_equivocal', GcZk.AC.pvw_explain_dec}
   \leanok
-  \uses{def:re-ot, def:pvw-dec}
+  \uses{def:re-ot, def:pvw-dec, lem:pvw-dec}
   On a decryption-mode common string, with $g_1 = y \cdot g_0$, $y \neq 0$ and $h_b = x \cdot g_b$,
   the PVW receiver is receiver equivocal with simulated message $\mathit{keyGen}(0, r)$,
-  $e_0(r) = r$ and $e_1(r) = y^{-1} r$.
+  $e_0(r) = r$ and $e_1(r) = y^{-1} r$. Moreover, for any receiver-equivocal explanations, the
+  explained secret $e_\sigma(r)$ decrypts what the sender encrypts on branch $\sigma$ under the
+  simulated key.
 \end{theorem}
 
 \begin{proof}
@@ -44,7 +49,9 @@ required to be statistically close to the honest one; here it has exactly the sa
   By Definition~\ref{def:pvw-dec}, $\mathit{keyGen}(1, r) = \mathit{keyGen}(0, y r)$, so
   $\mathit{keyGen}(1, y^{-1} r) = \mathit{keyGen}(0, r)$; multiplication by $y^{-1}$ is a bijection
   of $\mathbb{Z}_q$. This is the proof of \cite[Theorem~3.2]{GKPS18} and the algorithm
-  $\mathrm{TrapKeyGen}$ of \cite[Sect.~5.3]{PVW08}.
+  $\mathrm{TrapKeyGen}$ of \cite[Sect.~5.3]{PVW08}. The simulated key is the key of the choice
+  $\sigma$ with secret $e_\sigma(r)$, so the second claim is the correctness of decryption
+  (Lemma~\ref{lem:pvw-dec}).
 \end{proof}
 
 \begin{proposition}[The Chou--Orlandi receiver, given the sender's secret]
@@ -102,14 +109,15 @@ real game is $(Z_w, r)$.
 
 \begin{theorem}[Equivocation by programming the oracle]
   \label{thm:equivocate-rom}
-  \lean{GcZk.AC.always, GcZk.AC.simC, GcZk.AC.hyb_eq_simC, GcZk.AC.card_realC_le,
+  \lean{GcZk.AC.noCheck, GcZk.AC.simC, GcZk.AC.hyb_eq_simC, GcZk.AC.bad₂₃_noCheck,
+    GcZk.AC.card_realC_le,
     GcZk.AC.card_simC_le, GcZk.AC.equivocate_rom}
   \leanok
   \uses{def:com-games, lem:hyb-real, lem:ans-update, thm:zk-rom}
   Let a malicious verifier make $q_1$, $q_2$ and $q_3$ oracle queries before the commitment,
   between the commitment and the corruption, and after the corruption. Over $G$, $c$ and $r$
   uniform, the probabilities that it outputs $1$ in the real execution and against the simulator
-  differ by at most $(q_1 + q_2 + q_3)/|R|$.
+  differ by at most $(q_1 + q_2)/|R|$.
 \end{theorem}
 
 \begin{proof}
@@ -117,7 +125,11 @@ real game is $(Z_w, r)$.
   Off the bad event $\mathrm{Bad}_{23}$ of Lemma~\ref{lem:hyb-sim}, the hybrid of
   Lemma~\ref{lem:hyb-real}, which programs the oracle already before the second phase, and the
   simulator differ only in the answers of the second phase, and these do not hit the programmed
-  point (Lemma~\ref{lem:ans-update}). The rest is the counting of Theorem~\ref{thm:zk-rom}.
+  point (Lemma~\ref{lem:ans-update}). Since the check always passes, the last message is never an
+  abort, and the bad event reduces to a query of the second phase at the commitment point; the
+  queries of the third phase are answered by the programmed oracle in both games and cost nothing.
+  The rest is the counting of Theorem~\ref{thm:zk-rom}, applied to the verifier without its third
+  phase.
 \end{proof}
 
 \section{Soundness in decryption mode}

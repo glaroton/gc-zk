@@ -62,6 +62,7 @@ import GcZk
 #print axioms GcZk.CO.card_both_le
 #print axioms GcZk.CO.prob_accept_le
 #print axioms GcZk.AC.pvw_dec_equivocal
+#print axioms GcZk.AC.pvw_explain_dec
 #print axioms GcZk.AC.co_equivocal
 #print axioms GcZk.AC.explainRand_bijective
 #print axioms GcZk.AC.explain_prover

@@ -214,13 +214,16 @@ soundness needs adaptive authenticity.
 * `GcZk/Corruption.lean`. `GcZk.AC.ReceiverEquivocal`: the receiver's OT message can be produced
   without the choice bit and explained for either bit by a bijection of its randomness (Ganesh,
   Kondi, Patra and Sarkar, PKC 2018, Definition 3.1). `GcZk.AC.pvw_dec_equivocal`: the PVW
-  receiver in decryption mode is receiver equivocal (ibid., Theorem 3.2). `GcZk.AC.co_equivocal`:
+  receiver in decryption mode is receiver equivocal (ibid., Theorem 3.2), and
+  `GcZk.AC.pvw_explain_dec`: the explained secret decrypts the label of the actual choice.
+  `GcZk.AC.co_equivocal`:
   so is the Chou–Orlandi receiver, for a party that knows the sender's secret.
   `GcZk.AC.explain_prover`: with a receiver-equivocal OT, the prover's OT messages and the
   verifier's view, for any witness and the explained randomness, are the simulated ones.
   `GcZk.AC.equivocate_rom`: a prover corrupted after committing reveals `(Z_w, r)`; a simulator
   that committed to a uniform value and programs `G(Z_w, r)` at the corruption is off by at most
-  `(q₁ + q₂ + q₃) / |R|`. `GcZk.AC.prob_accept_dec_le`: soundness with the PVW OT in decryption
+  `(q₁ + q₂) / |R|`, where `q₁` and `q₂` count the oracle queries before the commitment and before
+  the corruption. `GcZk.AC.prob_accept_dec_le`: soundness with the PVW OT in decryption
   mode, at most the messy-mode bound plus the DDH advantage of the acceptance probability plus
   `3 / q`.
 
