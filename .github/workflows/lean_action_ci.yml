@@ -1,7 +1,9 @@
 name: Lean Action CI
 
 on:
+  # Branches only: pushing a release tag would otherwise start a second, identical run.
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 

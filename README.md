@@ -1,11 +1,21 @@
-# gc-zk
+# gc-zk: zero knowledge from garbled circuits
 
-**Zero knowledge from privacy-free garbled circuits, formalized in Lean 4 and Mathlib.**
+**Zero-knowledge proofs from privacy-free garbled circuits, formalized in Lean 4 and Mathlib.**
 
-The library formalizes the zero-knowledge protocol of Jawurek, Kerschbaum and Orlandi (CCS 2013,
-"JKO13") over the privacy-free Free-XOR garbling of Zahur, Rosulek and Evans (EUROCRYPT 2015,
-Sect. 6): correctness, authenticity in the random oracle model, the protocol with ideal and with
-real commitments and oblivious transfers, adaptive authenticity, and cut-and-choose.
+A garbled circuit is an encrypted form of a Boolean circuit: each wire carries one of two random
+labels, one for 0 and one for 1, and whoever holds one label of each input can compute the
+corresponding label of the output, but cannot forge the other one. The idea is due to Yao, in the context of secure two-party
+computation. Jawurek, Kerschbaum and Orlandi (CCS 2013, "JKO13") observed that garbled circuits
+also give an efficient zero-knowledge proof of "I know `w` with `C(w) = 1`": the verifier garbles
+`C`, the prover evaluates it on its witness and returns the output label, and the garbling is
+opened at the end so that the prover can check that it was honest. Since the prover knows its own
+input, the garbling only has to prevent forged output labels, not to hide anything; such schemes
+are called *privacy-free* (Frederiksen–Nielsen–Orlandi, EUROCRYPT 2015), and they are cheaper.
+
+The library formalizes the JKO13 protocol over the privacy-free Free-XOR garbled circuits of Zahur,
+Rosulek and Evans (EUROCRYPT 2015, Sect. 6): correctness, authenticity in the random oracle model,
+the protocol with ideal and with real commitments and oblivious transfers, adaptive authenticity,
+and cut-and-choose.
 
 The blueprint (the mathematics in the usual language, each result naming its Lean counterpart; the
 web version adds a dependency graph) has its source in [`blueprint/src`](blueprint/src); build it
@@ -281,7 +291,7 @@ The introduction of the blueprint discusses these works, with precise references
 * **Garbled circuits and secure computation, formalized:** the EasyCrypt verification of Yao's
   secure function evaluation (Almeida et al., CCS 2017); simulation-based security of multi-party
   computation in Isabelle/HOL (Butler–Aspinall–Gascón, ITP 2017); in Lean 4, the simulation-based
-  privacy of a garbling scheme, proved symbolically (Dziembowski–Fabiański–Micciancio–Stefański,
+  privacy of garbled circuits, proved symbolically (Dziembowski–Fabiański–Micciancio–Stefański,
   CSF 2026). CatCrypt (Spitters, ePrint 2026/604) lists Yao's garbled circuits with half-gates and a
   "Simplest OT" among its protocols, whose sources are private; as of November 2026 the README of
   its public core lists machinery for universal composability, and says that the UC theory itself is
